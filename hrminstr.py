@@ -4,14 +4,14 @@ class HRMInstruction:
 
 class Input(HRMInstruction):
 	def to_asm(self):
-		return "input"
+		return "INBOX"
 
 	def __repr__(self):
 		return "hrmi.Input()"
 
 class Output(HRMInstruction):
 	def to_asm(self):
-		return "output"
+		return "OUTBOX"
 
 	def __repr__(self):
 		return "hrmi.Output()"
@@ -23,7 +23,7 @@ class Save(HRMInstruction):
 		self.loc = loc
 
 	def to_asm(self):
-		return "save " + self.loc
+		return "COPYTO " + str(self.loc)
 
 	def __repr__(self):
 		return f"hrmi.Save({repr(self.loc)})"
@@ -35,7 +35,7 @@ class Load(HRMInstruction):
 		self.loc = loc
 
 	def to_asm(self):
-		return "load " + self.loc
+		return "COPYFROM " + str(self.loc)
 
 	def __repr__(self):
 		return f"hrmi.Load({repr(self.loc)})"
@@ -117,7 +117,7 @@ class Jump:
 		self.implicit = False
 	
 	def to_asm(self):
-		return "jmp " + self.dest.label
+		return "JUMP " + self.dest.label
 	
 	def __repr__(self):
 		return f"Jump({self.src.label}, {self.dest.label})"

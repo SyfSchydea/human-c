@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import string
+
+import hrminstr as hrmi
 import hcparse2
 
 def generate_name(idx):
@@ -46,6 +48,24 @@ def mark_implicit_jumps(blocks):
 		if blocks[i].next.dest is blocks[i + 1]:
 			blocks[i].next.implicit = True
 
+# Assign named variables to memory locations
+def assign_memory(blocks):
+	variables = []
+
+	def get_addr(name):
+		nonlocal variables
+
+		if name not in variables:
+			variables.append(name)
+
+		return variables.index(name)
+	
+	for block in blocks:
+		for inst in block.instructions:
+			if ((isinstance(inst, hrmi.Save) or isinstance(inst, hrmi.Load))
+					and type(inst.loc) is str):
+				inst.loc = get_addr(inst.loc)
+
 def main():
 	PATH = "y4-scrambler-handler.hc"
 
@@ -54,7 +74,11 @@ def main():
 	tree.create_blocks()
 	blocks = extract_blocks(tree)
 
+	assign_memory(blocks)
+
 	mark_implicit_jumps(blocks)
+
+	print("-- HUMAN RESOURCE MACHINE PROGRAM --\n")
 
 	for block in blocks:
 		asm = block.to_asm()
