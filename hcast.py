@@ -216,3 +216,19 @@ class Input(AbstractExpr):
 
 	def __repr__(self):
 		return "Input()"
+
+class Add(AbstractExpr):
+	__slots__ = [
+		# Expressions on the left and right side of the operator
+		"left",
+		"right",
+	]
+
+	def __init__(self, left, right):
+		self.left = left
+		self.right = right
+
+	def __repr__(self):
+		return ("Add("
+			+ repr(self.left) + ", "
+			+ repr(self.right) + ")")

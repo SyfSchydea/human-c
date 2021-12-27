@@ -70,12 +70,20 @@ def p_assign(p):
 	"expr : IDENTIFIER optws EQUALS optws expr"
 	p[0] = ast.Assignment(p[1], p[5])
 
+def p_expr_v(p):
+	"expr : expr_v"
+	p[0] = p[1]
+
+def p_add(p):
+	"expr : expr optws ADD optws expr_v"
+	p[0] = ast.Add(p[1], p[5])
+
 def p_input(p):
-	"expr : INPUT"
+	"expr_v : INPUT"
 	p[0] = ast.Input()
 
 def p_var(p):
-	"expr : IDENTIFIER"
+	"expr_v : IDENTIFIER"
 	p[0] = ast.VariableRef(p[1])
 
 def p_error(p):
