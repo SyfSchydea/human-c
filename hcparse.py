@@ -9,12 +9,12 @@ import hcast as ast
 # Creates list of lines
 
 def p_line_list(p):
-	"lines : line optws NL lines"
-	p[0] = p[4]
+	"lines : line NL lines"
+	p[0] = p[3]
 	p[0].insert(0, p[1])
 
 def p_final_line(p):
-	"lines : line optws optnl"
+	"lines : line optnl"
 	p[0] = [p[1]]
 
 def p_line(p):
@@ -39,43 +39,76 @@ def p_no_ws(p):
 	p[0] = ""
 
 def p_opt_nl(p):
-	"optnl : NL"
-	p[0] = None
+	"""optnl : NL
+	         |"""
+	pass
 
-def p_no_nl(p):
-	"optnl :"
-	p[0] = None
+def p_keyword_let(p):
+	"let : LET optws"
+	pass
+
+def p_keyword_init(p):
+	"init : INIT optws"
+	pass
+
+def p_keyword_forever(p):
+	"forever : FOREVER optws"
+	pass
+
+def p_keyword_output(p):
+	"output : OUTPUT optws"
+	pass
+
+def p_keyword_input(p):
+	"input : INPUT optws"
+	pass
+
+def p_operator_at(p):
+	"at : AT optws"
+	pass
+
+def p_operator_equals(p):
+	"equals : EQUALS optws"
+	pass
+
+def p_identifier(p):
+	"name : IDENTIFIER optws"
+	p[0] = p[1]
+
+def p_number(p):
+	"number : NUMBER optws"
+	p[0] = p[1]
 
 def p_declare_var(p):
-	"stmt : LET optws IDENTIFIER"
-	p[0] = ast.Declare(p[3])
+	"stmt : let name"
+	p[0] = ast.Declare(p[2])
 
 def p_declare_init(p):
-	"stmt : INIT optws IDENTIFIER optws AT optws NUMBER"
-	p[0] = ast.InitialValueDeclaration(p[3], p[7])
+	"stmt : init name at number"
+	p[0] = ast.InitialValueDeclaration(p[2], p[4])
 
 def p_forever(p):
-	"stmt : FOREVER"
+	"stmt : forever"
 	p[0] = ast.Forever()
 
 def p_output(p):
-	"stmt : OUTPUT optws expr"
-	p[0] = ast.Output(p[3])
+	"stmt : output expr"
+	p[0] = ast.Output(p[2])
 
 def p_expr_as_stmt(p):
 	"stmt : expr"
 	p[0] = ast.ExprLine(p[1])
 
 def p_assign(p):
-	"expr : IDENTIFIER optws EQUALS optws expr"
-	p[0] = ast.Assignment(p[1], p[5])
+	"expr : name equals expr"
+	p[0] = ast.Assignment(p[1], p[3])
 
-def p_input(p):
-	"expr : INPUT"
+def p_expr_input(p):
+	"expr : input"
 	p[0] = ast.Input()
 
 def p_var(p):
-	"expr : IDENTIFIER"
+	"expr : name"
 	p[0] = ast.VariableRef(p[1])
 
 def p_error(p):
