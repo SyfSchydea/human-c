@@ -18,6 +18,7 @@ tokens = (
 
 	"EQUALS",
 	"AT",
+	"ADD",
 )
 
 def t_NL(t):
@@ -45,6 +46,7 @@ def t_NUMBER(t):
 
 t_EQUALS = r"="
 t_AT     = r"@"
+t_ADD    = r"\+"
 
 def t_error(t):
 	raise TypeError(f"Unknown text {t.value}")
