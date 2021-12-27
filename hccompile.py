@@ -52,14 +52,24 @@ def mark_implicit_jumps(blocks):
 			blocks[i].next.implicit = True
 
 # Assign named variables to memory locations
-def assign_memory(blocks):
+def assign_memory(blocks, initial_memory):
 	variables = []
+
+	for mem in initial_memory:
+		if len(variables) <= mem.loc:
+			variables += [None] * (mem.loc - len(variables) + 1)
+
+		variables[mem.loc] = mem.name
 
 	def get_addr(name):
 		nonlocal variables
 
 		if name not in variables:
-			variables.append(name)
+			if None in variables:
+				idx = variables.index(None)
+				variables[idx] = name
+			else:
+				variables.append(name)
 
 		return variables.index(name)
 	
@@ -84,10 +94,12 @@ def main():
 	else:
 		tree = hcparse2.parse_from_path(args.input)
 
+	initial_memory_map = tree.get_memory_map()
+
 	tree.create_blocks()
 	blocks = extract_blocks(tree)
 
-	assign_memory(blocks)
+	assign_memory(blocks, initial_memory_map)
 
 	mark_implicit_jumps(blocks)
 

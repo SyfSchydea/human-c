@@ -1,4 +1,9 @@
+from dataclasses import dataclass
+
 import hrminstr as hrmi
+
+class HCTypeError(Exception):
+	pass
 
 class AbstractLine:
 	__slots__ = [
@@ -8,6 +13,11 @@ class AbstractLine:
 
 	def __init__(self, indent=""):
 		self.indent = indent
+
+	# Get list of memory values and variable assigned by this statement
+	# Defaults to returning an empty tuple, since most statements don't add any
+	def get_memory_map(self):
+		return ()
 
 	# Create a block of HRM instructions to represent this line
 	# Assign to self.block
@@ -42,6 +52,9 @@ class InitialValueDeclaration(AbstractLine):
 	def create_block(self):
 		# Empty block
 		self.block = hrmi.Block()
+	
+	def get_memory_map(self):
+		return (MemoryLocation(self.name, self.loc),)
 
 	def __init__(self, name, loc, indent=""):
 		super().__init__(indent)
@@ -53,6 +66,11 @@ class InitialValueDeclaration(AbstractLine):
 			+ repr(self.name) + ", "
 			+ repr(self.loc) + ", "
 			+ repr(self.indent) + ")")
+
+@dataclass
+class MemoryLocation:
+	name: str
+	loc: int
 
 # Sequence of AbstractLine objects, to be run in order
 class StatementList:
@@ -70,6 +88,24 @@ class StatementList:
 			self.stmts[i - 1].block.assign_next(self.stmts[i].block)
 		
 		# Last block is left with no jump specified
+
+	# Look up memory locations of variables specified by the program
+	def get_memory_map(self):
+		memory_by_name = {}
+		memory_by_loc = {}
+
+		for stmt in self.stmts:
+			new_memory = stmt.get_memory_map()
+			for mem in new_memory:
+				if mem.name in memory_by_name:
+					raise HCTypeError(f"Variable {mem.name} declared twice")
+				if mem.loc in memory_by_loc:
+					raise HCTypeError(f"Multiple variables declared at {mem.loc}")
+
+				memory_by_name[mem.name] = mem
+				memory_by_loc[mem.loc] = mem
+
+		return memory_by_name.values()
 
 	def __init__(self, stmts=None):
 		self.stmts = stmts
