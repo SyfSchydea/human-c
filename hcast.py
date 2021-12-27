@@ -32,6 +32,28 @@ class Declare(AbstractLine):
 			+ repr(self.name) + ", "
 			+ repr(self.indent) + ")")
 
+# eg: init Zero @ 10
+class InitialValueDeclaration(AbstractLine):
+	__slots__ = [
+		"name",
+		"loc",
+	]
+
+	def create_block(self):
+		# Empty block
+		self.block = hrmi.Block()
+
+	def __init__(self, name, loc, indent=""):
+		super().__init__(indent)
+		self.name = name
+		self.loc = loc
+	
+	def __repr__(self):
+		return ("Declare("
+			+ repr(self.name) + ", "
+			+ repr(self.loc) + ", "
+			+ repr(self.indent) + ")")
+
 # Sequence of AbstractLine objects, to be run in order
 class StatementList:
 	__slots__ = ["stmts"]

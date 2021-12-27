@@ -42,6 +42,10 @@ def p_declare_var(p):
 	"stmt : LET optws IDENTIFIER"
 	p[0] = ast.Declare(p[3])
 
+def p_declare_init(p):
+	"stmt : INIT optws IDENTIFIER optws AT optws NUMBER"
+	p[0] = ast.InitialValueDeclaration(p[3], p[7])
+
 def p_forever(p):
 	"stmt : FOREVER"
 	p[0] = ast.Forever()
@@ -72,13 +76,22 @@ def p_error(p):
 		return
 
 	print("Syntax error on line", p.lineno, p.type, repr(p.value))
-	print(dir(p))
 
 def main():
-	PATH = "y4-scrambler-handler.hc"
+	import sys
+	import argparse
+
+	ap = argparse.ArgumentParser(description="Compile .hc files")
+	ap.add_argument("input", default=None)
+
+	args = ap.parse_args()
+
 	program = None
-	with open(PATH) as f:
-		program = f.read()
+	if args.input is None:
+		program = sys.stdin.read()
+	else:
+		with open(args.input) as f:
+			program = f.read()
 
 	result = parser.parse(program, tracking=True)
 	print(result)
