@@ -95,6 +95,7 @@ def main():
 		tree = hcparse2.parse_from_path(args.input)
 
 	initial_memory_map = tree.get_memory_map()
+	tree.validate_structure()
 
 	tree.create_blocks()
 	blocks = extract_blocks(tree)

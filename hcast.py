@@ -5,6 +5,9 @@ import hrminstr as hrmi
 class HCTypeError(Exception):
 	pass
 
+class HCInternalError(Exception):
+	pass
+
 class AbstractLine:
 	__slots__ = [
 		"indent",
@@ -18,6 +21,10 @@ class AbstractLine:
 	# Defaults to returning an empty tuple, since most statements don't add any
 	def get_memory_map(self):
 		return ()
+
+	# Most statements don't require validation
+	# def validate(self):
+	# 	return None
 
 	# Create a block of HRM instructions to represent this line
 	# Assign to self.block
@@ -106,6 +113,32 @@ class StatementList:
 				memory_by_loc[mem.loc] = mem
 
 		return memory_by_name.values()
+	
+	# Some expressions will require processing before they can be converted to instructions
+	def validate_structure(self):
+		i = 0
+		while i < len(self.stmts):
+			stmt = self.stmts[i]
+			result = stmt.validate()
+
+			# If the validation function returns a Statement, replace the current one
+			if isinstance(result, AbstractLine):
+				self.stmts[i] = result
+
+			# If the validation returns a list of statements, replace the current one with all of them
+			elif (isinstance(result, list)
+					and all(isinstance(s, AbstractLine) for s in result)):
+				self.stmts[i:i+1] = result
+				i += len(result) - 1
+
+			# If the validation function returns None, accept the validation with no modifications
+			elif result is None:
+				pass
+
+			else:
+				raise HCInternalError("Unexpected validation function return type", result)
+
+			i += 1
 
 	def __init__(self, stmts=None):
 		self.stmts = stmts
@@ -128,6 +161,10 @@ class Forever(AbstractLine):
 
 		self.block = hrmi.ForeverBlock(self.body.stmts[0].block)
 
+	def validate(self):
+		self.body.validate_structure()
+		return None
+
 	def __init__(self, body=None):
 		self.body = body
 
@@ -145,6 +182,24 @@ class Output(AbstractLine):
 		self.block = hrmi.Block();
 		self.expr.add_to_block(self.block)
 		self.block.add_instruction(hrmi.Output())
+
+	def validate(self):
+		new_expr, injected_stmts = self.expr.validate()
+		if isinstance(new_expr, AbstractExpr):
+			self.expr = new_expr
+		elif new_expr is not None:
+			raise HCInternalError("Unexpected expression replacement type", new_expr)
+
+		if isinstance(injected_stmts, AbstractLine):
+			injected_stmts = [injected_stmts]
+
+		if (isinstance(injected_stmts, list)
+				and all(isinstance(s, AbstractLine) for s in injected_stmts)):
+			return [*injected_stmts, self]
+		elif injected_stmts is None:
+			return None
+		else:
+			raise HCInternalError("Unexpected injected statements type", injected_stmts)
 
 	def __init__(self, expr, indent=""):
 		super().__init__(indent)
@@ -176,6 +231,12 @@ class AbstractExpr:
 	# along with any side-effects
 	def add_to_block(self, block):
 		raise NotImplementedError("AbstractExpr.add_to_block", self)
+
+	def validate(self):
+		raise NotImplementedError("AbstractExpr.validate", self)
+
+	def has_side_effects(self):
+		raise NotImplementedError("AbstractExpr.has_side_effects", self)
 
 # eg. name = expr
 class Assignment(AbstractExpr):
@@ -214,6 +275,12 @@ class Input(AbstractExpr):
 	def add_to_block(self, block):
 		block.add_instruction(hrmi.Input())
 
+	def validate(self):
+		return (None, None)
+
+	def has_side_effects(self):
+		return True
+
 	def __repr__(self):
 		return "Input()"
 
@@ -235,7 +302,51 @@ class Add(AbstractExpr):
 			block.add_instruction(hrmi.Add(self.right.name))
 
 		else:
-			raise HCTypeError("Unable to directly add right operand", self.right)
+			raise HCInternalError("Unable to directly add right operand", self.right)
+
+	def validate(self):
+		injected_stmts = []
+
+		while True:
+			# Recurse on left side
+			new_left, left_injected = self.left.validate()
+			if isinstance(new_left, AbstractExpr):
+				self.left = new_left
+			elif new_left is not None:
+				raise HCInternalError("Unexpected expression replacement type", new_left)
+
+			if isinstance(left_injected, AbstractLine):
+				injected_stmts.append(left_injected)
+			elif (isinstance(left_injected, list)
+					and all(isinstance(s, AbstractLine) for s in left_injected)):
+				injected_stmts.extend(left_injected)
+			elif left_injected is not None:
+				raise HCInternalError("Unexpected injected statements type", left_injected)
+
+			if isinstance(self.right, VariableRef):
+				break
+
+			# If the right hand side is an add node, rotate to put the child add on the left
+			# Relies on associativity
+			elif isinstance(self.right, Add):
+				a = self.left
+				b = self.right.left
+				c = self.right.right
+				self.left = Add(a, b)
+				self.right = c
+				continue
+
+			# Swap operands. Relies on commutativity
+			self.left, self.right = self.right, self.left
+		
+			if self.right.has_side_effects():
+				# TODO: assign unique name somehow
+				var_name = "new_var_who_dis"
+				new_assign = ExprLine(Assignment(var_name, self.right))
+				injected_stmts.append(new_assign)
+				self.right = VariableRef(var_name)
+
+		return (None, injected_stmts)
 
 	def __repr__(self):
 		return ("Add("
