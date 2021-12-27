@@ -5,6 +5,7 @@ from ply import lex, yacc
 tokens = (
 	"NL",
 	"WS",
+	"COMMENT",
 
 	"LET",
 	"INIT",
@@ -25,6 +26,8 @@ def t_NL(t):
 	return t
 
 t_WS = r"[\t ]+"
+
+t_COMMENT = r"//[^\n]*"
 
 t_LET     = r"let"
 t_INIT    = r"init"

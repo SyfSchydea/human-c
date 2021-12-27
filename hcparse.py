@@ -26,6 +26,10 @@ def p_empty_line(p):
 	"lines : optws NL lines"
 	p[0] = p[3]
 
+def p_comment_line(p):
+	"lines : optws COMMENT NL lines"
+	p[0] = p[4]
+
 def p_opt_ws(p):
 	"optws : WS"
 	p[0] = p[1]
