@@ -12,8 +12,19 @@ class HCParseError(Exception):
 	pass
 
 def main():
-	PATH = "y4-scrambler-handler.hc"
-	tree = parse_from_path(PATH)
+	import sys
+	import argparse
+
+	parser = argparse.ArgumentParser(description="Parse .hc files")
+	parser.add_argument("input", default=None)
+
+	args = parser.parse_args()
+
+	tree = None
+	if args.input is None:
+		tree = parse_file(sys.stdin)
+	else:
+		tree = parse_from_path(args.input)
 	
 	for stmt in tree.stmts:
 		print(stmt)
@@ -29,7 +40,6 @@ def parse_file(f):
 def parse_from_path(path):
 	with open(path) as f:
 		return parse_file(f)
-
 
 @dataclass
 class StackEntry:
