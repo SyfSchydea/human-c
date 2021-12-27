@@ -67,9 +67,19 @@ def assign_memory(blocks):
 				inst.loc = get_addr(inst.loc)
 
 def main():
-	PATH = "y4-scrambler-handler.hc"
+	import sys
+	import argparse
 
-	tree = hcparse2.parse_file(PATH)
+	parser = argparse.ArgumentParser(description="Compile .hc files")
+	parser.add_argument("input", default=None)
+
+	args = parser.parse_args()
+
+	tree = None
+	if args.input is None:
+		tree = hcparse2.parse_file(sys.stdin)
+	else:
+		tree = hcparse2.parse_from_path(args.input)
 
 	tree.create_blocks()
 	blocks = extract_blocks(tree)
@@ -84,6 +94,6 @@ def main():
 		asm = block.to_asm()
 		if len(asm) > 0:
 			print(asm)
-
+	
 if __name__ == "__main__":
 	main()

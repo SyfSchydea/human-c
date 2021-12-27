@@ -13,20 +13,23 @@ class HCParseError(Exception):
 
 def main():
 	PATH = "y4-scrambler-handler.hc"
-	tree = parse_file(PATH)
+	tree = parse_from_path(PATH)
 	
 	for stmt in tree.stmts:
 		print(stmt)
 
-def parse_file(path):
-	program = None
-	with open(path) as f:
-		program = f.read()
+def parse_file(f):
+	program = f.read()
 
 	result = hcparse.parser.parse(program, tracking=True)
 	tree = nest_lines(result)
 
 	return tree
+
+def parse_from_path(path):
+	with open(path) as f:
+		return parse_file(f)
+
 
 @dataclass
 class StackEntry:
