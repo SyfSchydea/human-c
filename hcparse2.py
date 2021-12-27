@@ -33,6 +33,9 @@ def parse_file(f):
 	program = f.read()
 
 	result = hcparse.parser.parse(program, tracking=True)
+	if result is None:
+		raise HCParseError("Program failed to produce a tree")
+
 	tree = nest_lines(result)
 
 	return tree
