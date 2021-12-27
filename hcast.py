@@ -367,6 +367,9 @@ class Add(AbstractExpr):
 
 		return (None, injected_stmts)
 
+	def has_side_effects(self):
+		return self.left.has_side_effects() or self.right.has_side_effects()
+
 	def __repr__(self):
 		return ("Add("
 			+ repr(self.left) + ", "
