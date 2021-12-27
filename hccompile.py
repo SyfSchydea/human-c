@@ -2,19 +2,9 @@
 
 import string
 
+from hcast import generate_name
 import hrminstr as hrmi
 import hcparse2
-
-def generate_name(idx):
-	name = ""
-
-	while True:
-		idx, rem = divmod(idx, 26)
-
-		name += string.ascii_lowercase[rem]
-
-		if idx == 0:
-			return name
 
 # Extract a list of all unique blocks from a statement list
 def extract_blocks(stmt_list):
@@ -95,7 +85,8 @@ def main():
 		tree = hcparse2.parse_from_path(args.input)
 
 	initial_memory_map = tree.get_memory_map()
-	tree.validate_structure()
+	namespace = tree.get_namespace()
+	tree.validate_structure(namespace)
 
 	tree.create_blocks()
 	blocks = extract_blocks(tree)

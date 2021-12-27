@@ -1,3 +1,4 @@
+import string
 from dataclasses import dataclass
 
 import hrminstr as hrmi
@@ -7,6 +8,18 @@ class HCTypeError(Exception):
 
 class HCInternalError(Exception):
 	pass
+
+# Generate a unique name according using an index
+def generate_name(idx):
+	name = ""
+
+	while True:
+		idx, rem = divmod(idx, 26)
+
+		name += string.ascii_lowercase[rem]
+
+		if idx == 0:
+			return name
 
 class AbstractLine:
 	__slots__ = [
@@ -22,15 +35,15 @@ class AbstractLine:
 	def get_memory_map(self):
 		return ()
 
-	# Most statements don't require validation
-	# def validate(self):
-	# 	return None
-
 	# Create a block of HRM instructions to represent this line
 	# Assign to self.block
 	# Doesn't need to assign_next yet
 	def create_block(self):
 		raise NotImplementedError("AbstractLine.createBlock", self)
+	
+	# Fetch a list of variables used in this line
+	def get_namespace(self):
+		raise NotImplementedError("AbstractLine.get_namespace", self)
 
 # eg: let x
 class Declare(AbstractLine):
@@ -43,7 +56,10 @@ class Declare(AbstractLine):
 	def __init__(self, name, indent=""):
 		super().__init__(indent)
 		self.name = name
-	
+
+	def get_namespace(self):
+		return Namespace(self.name)
+
 	def __repr__(self):
 		return ("Declare("
 			+ repr(self.name) + ", "
@@ -67,7 +83,10 @@ class InitialValueDeclaration(AbstractLine):
 		super().__init__(indent)
 		self.name = name
 		self.loc = loc
-	
+
+	def get_namespace(self):
+		return Namespace(self.name)
+
 	def __repr__(self):
 		return ("Declare("
 			+ repr(self.name) + ", "
@@ -115,11 +134,11 @@ class StatementList:
 		return memory_by_name.values()
 	
 	# Some expressions will require processing before they can be converted to instructions
-	def validate_structure(self):
+	def validate_structure(self, namespace):
 		i = 0
 		while i < len(self.stmts):
 			stmt = self.stmts[i]
-			result = stmt.validate()
+			result = stmt.validate(namespace)
 
 			# If the validation function returns a Statement, replace the current one
 			if isinstance(result, AbstractLine):
@@ -139,6 +158,16 @@ class StatementList:
 				raise HCInternalError("Unexpected validation function return type", result)
 
 			i += 1
+	
+	# Fetch a list of variable names used in this program tree
+	def get_namespace(self):
+		ns = Namespace()
+
+		for stmt in self.stmts:
+			stmt_ns = stmt.get_namespace()
+			ns.merge(stmt_ns)
+
+		return ns
 
 	def __init__(self, stmts=None):
 		self.stmts = stmts
@@ -161,8 +190,11 @@ class Forever(AbstractLine):
 
 		self.block = hrmi.ForeverBlock(self.body.stmts[0].block)
 
-	def validate(self):
-		self.body.validate_structure()
+	def get_namespace(self):
+		return self.body.get_namespace()
+
+	def validate(self, namespace):
+		self.body.validate_structure(namespace)
 		return None
 
 	def __init__(self, body=None):
@@ -181,8 +213,8 @@ class AbstractLineWithExpr(AbstractLine):
 		super().__init__(indent)
 		self.expr = expr
 
-	def validate(self):
-		new_expr, injected_stmts = self.expr.validate()
+	def validate(self, namespace):
+		new_expr, injected_stmts = self.expr.validate(namespace)
 		if isinstance(new_expr, AbstractExpr):
 			self.expr = new_expr
 		elif new_expr is not None:
@@ -198,6 +230,9 @@ class AbstractLineWithExpr(AbstractLine):
 			return None
 		else:
 			raise HCInternalError("Unexpected injected statements type", injected_stmts)
+
+	def get_namespace(self):
+		return self.expr.get_namespace()
 
 # output <expr>
 class Output(AbstractLineWithExpr):
@@ -229,11 +264,14 @@ class AbstractExpr:
 	def add_to_block(self, block):
 		raise NotImplementedError("AbstractExpr.add_to_block", self)
 
-	def validate(self):
+	def validate(self, namespace):
 		raise NotImplementedError("AbstractExpr.validate", self)
 
 	def has_side_effects(self):
 		raise NotImplementedError("AbstractExpr.has_side_effects", self)
+
+	def get_namespace(self):
+		raise NotImplementedError("AbstractExpr.get_namespace", self)
 
 # eg. name = expr
 class Assignment(AbstractExpr):
@@ -250,8 +288,8 @@ class Assignment(AbstractExpr):
 		self.name = name
 		self.expr = expr
 
-	def validate(self):
-		new_expr, injected_stmts = self.expr.validate()
+	def validate(self, namespace):
+		new_expr, injected_stmts = self.expr.validate(namespace)
 
 		if isinstance(new_expr, AbstractExpr):
 			self.expr = new_expr
@@ -265,6 +303,11 @@ class Assignment(AbstractExpr):
 
 		injected_stmts.append(self)
 		return (None, injected_stmts)
+
+	def get_namespace(self):
+		ns = self.expr.get_namespace()
+		ns.add_name(self.name)
+		return ns
 
 	def __repr__(self):
 		return ("Assignment("
@@ -280,11 +323,14 @@ class VariableRef(AbstractExpr):
 	def __init__(self, name):
 		self.name = name
 
-	def validate(self):
+	def validate(self, namespace):
 		return (None, None)
 
 	def has_side_effects(self):
 		return False
+
+	def get_namespace(self):
+		return Namespace(self.name)
 
 	def __repr__(self):
 		return ("VariableRef("
@@ -294,11 +340,14 @@ class Input(AbstractExpr):
 	def add_to_block(self, block):
 		block.add_instruction(hrmi.Input())
 
-	def validate(self):
+	def validate(self, namespace):
 		return (None, None)
 
 	def has_side_effects(self):
 		return True
+
+	def get_namespace(self):
+		return Namespace()
 
 	def __repr__(self):
 		return "Input()"
@@ -323,12 +372,12 @@ class Add(AbstractExpr):
 		else:
 			raise HCInternalError("Unable to directly add right operand", self.right)
 
-	def validate(self):
+	def validate(self, namespace):
 		injected_stmts = []
 
 		while True:
 			# Recurse on left side
-			new_left, left_injected = self.left.validate()
+			new_left, left_injected = self.left.validate(namespace)
 			if isinstance(new_left, AbstractExpr):
 				self.left = new_left
 			elif new_left is not None:
@@ -359,8 +408,8 @@ class Add(AbstractExpr):
 			self.left, self.right = self.right, self.left
 		
 			if self.right.has_side_effects():
-				# TODO: assign unique name somehow
-				var_name = "new_var_who_dis"
+				var_name = namespace.get_unique_name()
+				print(var_name)
 				new_assign = ExprLine(Assignment(var_name, self.right))
 				injected_stmts.append(new_assign)
 				self.right = VariableRef(var_name)
@@ -370,7 +419,49 @@ class Add(AbstractExpr):
 	def has_side_effects(self):
 		return self.left.has_side_effects() or self.right.has_side_effects()
 
+	def get_namespace(self):
+		ns_l = self.left.get_namespace()
+		ns_r = self.right.get_namespace()
+		ns_l.merge(ns_r)
+		return ns_l
+
 	def __repr__(self):
 		return ("Add("
 			+ repr(self.left) + ", "
 			+ repr(self.right) + ")")
+
+# Collection of names used in a part or whole of the program
+class Namespace:
+	__slots__ = [
+		"names",
+		"next_generated_id",
+	]
+
+	# names may initialise to a string, iterable of strings, or None
+	def __init__(self, names=None):
+		if isinstance(names, str):
+			self.names = set((names,))
+		elif names is None:
+			self.names = set()
+		else:
+			self.names = set(*names)
+
+		self.next_generated_id = 0
+
+	# Merge another Namespace into this one
+	def merge(self, other):
+		self.names |= other.names
+		if other.next_generated_id > self.next_generated_id:
+			self.next_generated_id = other.next_generated_id
+
+	def add_name(self, name):
+		self.names.add(name)
+
+	def get_unique_name(self):
+		while True:
+			name = generate_name(self.next_generated_id)
+			self.next_generated_id += 1
+
+			if name not in self.names:
+				self.add_name(name)
+				return name
