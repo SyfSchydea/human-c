@@ -174,14 +174,12 @@ class Forever(AbstractLine):
 	def __repr__(self):
 		return f"Forever({repr(self.body)})"
 
-# output <expr>
-class Output(AbstractLine):
-	__slots__ = ["expr"]
+class AbstractLineWithExpr(AbstractLine):
+	__slots = ["expr"]
 
-	def create_block(self):
-		self.block = hrmi.Block();
-		self.expr.add_to_block(self.block)
-		self.block.add_instruction(hrmi.Output())
+	def __init__(self, expr, indent=""):
+		super().__init__(indent)
+		self.expr = expr
 
 	def validate(self):
 		new_expr, injected_stmts = self.expr.validate()
@@ -201,25 +199,24 @@ class Output(AbstractLine):
 		else:
 			raise HCInternalError("Unexpected injected statements type", injected_stmts)
 
-	def __init__(self, expr, indent=""):
-		super().__init__(indent)
-		self.expr = expr
-	
+# output <expr>
+class Output(AbstractLineWithExpr):
+	__slots__ = ["expr"]
+
+	def create_block(self):
+		self.block = hrmi.Block();
+		self.expr.add_to_block(self.block)
+		self.block.add_instruction(hrmi.Output())
+
 	def __repr__(self):
 		return ("Output("
 			+ repr(self.expr) + ", "
 			+ repr(self.indent) + ")")
 
-class ExprLine(AbstractLine):
-	__slots__ = "expr"
-
+class ExprLine(AbstractLineWithExpr):
 	def create_block(self):
 		self.block = hrmi.Block();
 		self.expr.add_to_block(self.block)
-
-	def __init__(self, expr, indent=""):
-		super().__init__(indent)
-		self.expr = expr
 
 	def __repr__(self):
 		return ("ExprLine("
@@ -253,6 +250,22 @@ class Assignment(AbstractExpr):
 		self.name = name
 		self.expr = expr
 
+	def validate(self):
+		new_expr, injected_stmts = self.expr.validate()
+
+		if isinstance(new_expr, AbstractExpr):
+			self.expr = new_expr
+		elif new_expr is not None:
+			raise HCInternalError("Unexpected expression replacement type", new_expr)
+
+		if isinstance(injected_stmts, AbstractLine):
+			injected_stmts = [injected_stmts]
+		elif injected_stmts is None:
+			return (None, None)
+
+		injected_stmts.append(self)
+		return (None, injected_stmts)
+
 	def __repr__(self):
 		return ("Assignment("
 			+ repr(self.name) + ", "
@@ -266,6 +279,12 @@ class VariableRef(AbstractExpr):
 
 	def __init__(self, name):
 		self.name = name
+
+	def validate(self):
+		return (None, None)
+
+	def has_side_effects(self):
+		return False
 
 	def __repr__(self):
 		return ("VariableRef("
