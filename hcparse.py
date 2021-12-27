@@ -100,12 +100,16 @@ def p_output(p):
 	p[0] = ast.Output(p[2])
 
 def p_expr_as_stmt(p):
-	"stmt : expr"
+	"stmt : expr_assign"
 	p[0] = ast.ExprLine(p[1])
 
 def p_assign(p):
-	"expr : name equals expr"
+	"expr_assign : name equals expr_assign"
 	p[0] = ast.Assignment(p[1], p[3])
+
+def p_no_assign(p):
+	"expr_assign : expr"
+	p[0] = p[1]
 
 def p_expr_v(p):
 	"expr : expr_v"
@@ -122,6 +126,11 @@ def p_input(p):
 def p_var(p):
 	"expr_v : name"
 	p[0] = ast.VariableRef(p[1])
+
+precedence = (
+	("right", "EQUALS"),
+	("left",  "ADD"),
+)
 
 def p_error(p):
 	if not p:
