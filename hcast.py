@@ -228,6 +228,15 @@ class Add(AbstractExpr):
 		self.left = left
 		self.right = right
 
+	def add_to_block(self, block):
+		self.left.add_to_block(block)
+
+		if isinstance(self.right, VariableRef):
+			block.add_instruction(hrmi.Add(self.right.name))
+
+		else:
+			raise HCTypeError("Unable to directly add right operand", self.right)
+
 	def __repr__(self):
 		return ("Add("
 			+ repr(self.left) + ", "

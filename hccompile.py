@@ -75,7 +75,7 @@ def assign_memory(blocks, initial_memory):
 	
 	for block in blocks:
 		for inst in block.instructions:
-			if ((isinstance(inst, hrmi.Save) or isinstance(inst, hrmi.Load))
+			if (isinstance(inst, hrmi.AbstractParameterisedInstruction)
 					and type(inst.loc) is str):
 				inst.loc = get_addr(inst.loc)
 

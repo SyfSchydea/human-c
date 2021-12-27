@@ -16,29 +16,32 @@ class Output(HRMInstruction):
 	def __repr__(self):
 		return "hrmi.Output()"
 
-class Save(HRMInstruction):
+class AbstractParameterisedInstruction(HRMInstruction):
 	__slots__ = ["loc"]
 
 	def __init__(self, loc):
 		self.loc = loc
 
+class Save(AbstractParameterisedInstruction):
 	def to_asm(self):
 		return "COPYTO " + str(self.loc)
 
 	def __repr__(self):
 		return f"hrmi.Save({repr(self.loc)})"
 
-class Load(HRMInstruction):
-	__slots__ = ["loc"]
-
-	def __init__(self, loc):
-		self.loc = loc
-
+class Load(AbstractParameterisedInstruction):
 	def to_asm(self):
 		return "COPYFROM " + str(self.loc)
 
 	def __repr__(self):
 		return f"hrmi.Load({repr(self.loc)})"
+
+class Add(AbstractParameterisedInstruction):
+	def to_asm(self):
+		return "ADD " + str(self.loc)
+
+	def __repr__(self):
+		return f"hrmi.Add({repr(self.loc)})"
 
 # Block of instructions
 # A block consists of
