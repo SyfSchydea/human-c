@@ -60,6 +60,9 @@ class Declare(AbstractLine):
 	def get_namespace(self):
 		return Namespace(self.name)
 
+	def validate(self, namespace):
+		return None
+
 	def __repr__(self):
 		return ("Declare("
 			+ repr(self.name) + ", "
@@ -87,8 +90,11 @@ class InitialValueDeclaration(AbstractLine):
 	def get_namespace(self):
 		return Namespace(self.name)
 
+	def validate(self, namespace):
+		return None
+
 	def __repr__(self):
-		return ("Declare("
+		return ("InitialValueDeclaration("
 			+ repr(self.name) + ", "
 			+ repr(self.loc) + ", "
 			+ repr(self.indent) + ")")
