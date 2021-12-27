@@ -25,6 +25,9 @@ def extract_blocks(stmt_list):
 	while len(nodes_to_check) > 0:
 		block = nodes_to_check.pop()
 
+		if isinstance(block, hrmi.ForeverBlock):
+			block = block.first_block
+
 		if block in blocks:
 			continue
 
