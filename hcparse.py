@@ -22,6 +22,10 @@ def p_line(p):
 	p[0] = p[2]
 	p[0].indent = p[1]
 
+def p_empty_line(p):
+	"lines : optws NL lines"
+	p[0] = p[3]
+
 def p_opt_ws(p):
 	"optws : WS"
 	p[0] = p[1]
