@@ -11,12 +11,15 @@ tokens = (
 	"INIT",
 	"INPUT",
 	"OUTPUT",
+	"IF",
 	"FOREVER",
 
 	"IDENTIFIER",
 	"NUMBER",
 
 	"EQUALS",
+	"DBL_EQUALS",
+	"NOT_EQUALS",
 	"AT",
 	"ADD",
 )
@@ -34,9 +37,10 @@ t_LET     = r"let"
 t_INIT    = r"init"
 t_INPUT   = r"input"
 t_OUTPUT  = r"output"
+t_IF      = r"if"
 t_FOREVER = r"forever"
 
-t_IDENTIFIER = (r"(?!(?:let|forever|input|output|init)"
+t_IDENTIFIER = (r"(?!(?:let|forever|input|output|init|if)"
 	+ r"[^a-zA-Z_\d])[a-zA-Z_][a-zA-Z_\d]*")
 
 def t_NUMBER(t):
@@ -44,9 +48,11 @@ def t_NUMBER(t):
 	t.value = int(t.value)
 	return t
 
-t_EQUALS = r"="
-t_AT     = r"@"
-t_ADD    = r"\+"
+t_EQUALS     = r"="
+t_DBL_EQUALS = r"=="
+t_NOT_EQUALS = r"!="
+t_AT         = r"@"
+t_ADD        = r"\+"
 
 def t_error(t):
 	raise TypeError(f"Unknown text {t.value}")

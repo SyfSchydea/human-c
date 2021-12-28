@@ -1,7 +1,7 @@
 // Year 7 - Zero Exterminator
 
 // Send all things that ARE NOT
-// ZERO tothe OUTBOX.
+// ZERO to the OUTBOX.
 
 let x
 forever
