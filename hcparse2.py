@@ -51,6 +51,9 @@ class StackEntry:
 
 # Nest lines appropriately, given a list of raw lines from phase 1 parsing
 def nest_lines(line_list):
+	if len(line_list) == 0:
+		return ast.StatementList()
+
 	stack = [
 		StackEntry(ast.StatementList(), line_list[0].indent),
 	]

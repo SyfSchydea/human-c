@@ -8,6 +8,9 @@ import hcparse2
 
 # Extract a list of all unique blocks from a statement list
 def extract_blocks(stmt_list):
+	if len(stmt_list.stmts) == 0:
+		return []
+
 	nodes_to_check = [stmt_list.stmts[0].block]
 	blocks = []
 	names_assigned = 0
@@ -43,6 +46,9 @@ def mark_implicit_jumps(blocks):
 
 # Assign named variables to memory locations
 def assign_memory(blocks, initial_memory):
+	if len(blocks) == 0:
+		return
+
 	variables = []
 
 	for mem in initial_memory:

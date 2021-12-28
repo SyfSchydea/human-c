@@ -13,22 +13,23 @@ def p_line_list(p):
 	p[0] = p[3]
 	p[0].insert(0, p[1])
 
-def p_final_line(p):
-	"lines : line optnl"
-	p[0] = [p[1]]
+def p_null_lines(p):
+	"lines : optws opt_comment"
+	p[0] = []
+
+def p_empty_line(p):
+	"lines : optws opt_comment NL lines"
+	p[0] = p[4]
+
+def p_opt_comment(p):
+	"""opt_comment : COMMENT
+	               |"""
+	pass
 
 def p_line(p):
 	"line : optws stmt"
 	p[0] = p[2]
 	p[0].indent = p[1]
-
-def p_empty_line(p):
-	"lines : optws NL lines"
-	p[0] = p[3]
-
-def p_comment_line(p):
-	"lines : optws COMMENT NL lines"
-	p[0] = p[4]
 
 def p_opt_ws(p):
 	"optws : WS"
@@ -37,11 +38,6 @@ def p_opt_ws(p):
 def p_no_ws(p):
 	"optws :"
 	p[0] = ""
-
-def p_opt_nl(p):
-	"""optnl : NL
-	         |"""
-	pass
 
 def p_keyword_let(p):
 	"let : LET optws"
