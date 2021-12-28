@@ -212,6 +212,24 @@ class Forever(AbstractLine):
 	def __repr__(self):
 		return f"Forever({repr(self.body)})"
 
+class If(AbstractLine):
+	__slots__ = [
+		"condition",
+		"then_block",
+	]
+
+	def __init__(self, cond, then_block=None):
+		self.condition = cond
+		self.then_block = then_block
+
+		if self.then_block is None:
+			self.then_block = StatementList()
+
+	def __repr__(self):
+		return ("Forever("
+			+ repr(self.condition) + ", "
+			+ repr(self.then_block) + ")")
+
 class AbstractLineWithExpr(AbstractLine):
 	__slots = ["expr"]
 
@@ -342,6 +360,28 @@ class VariableRef(AbstractExpr):
 		return ("VariableRef("
 			+ repr(self.name) + ")")
 
+class Number(AbstractExpr):
+	__slots__ = ["value"]
+
+	def __init__(self, value):
+		self.value = value
+
+	def add_to_block(self, block):
+		raise HCTypeError("Cannot conjure arbitrary numbers")
+
+	def validate(self, namespace):
+		return (None, None)
+
+	def has_side_effects(self):
+		return False
+
+	def get_namespace(self):
+		return Namespace()
+
+	def __repr__(self):
+		return ("Number("
+			+ repr(self.value) + ")")
+
 class Input(AbstractExpr):
 	def add_to_block(self, block):
 		block.add_instruction(hrmi.Input())
@@ -358,9 +398,9 @@ class Input(AbstractExpr):
 	def __repr__(self):
 		return "Input()"
 
-class Add(AbstractExpr):
+# Any operator with a left and right operand
+class AbstractBinaryOperator(AbstractExpr):
 	__slots__ = [
-		# Expressions on the left and right side of the operator
 		"left",
 		"right",
 	]
@@ -369,6 +409,16 @@ class Add(AbstractExpr):
 		self.left = left
 		self.right = right
 
+	def has_side_effects(self):
+		return self.left.has_side_effects() or self.right.has_side_effects()
+
+	def get_namespace(self):
+		ns_l = self.left.get_namespace()
+		ns_r = self.right.get_namespace()
+		ns_l.merge(ns_r)
+		return ns_l
+
+class Add(AbstractBinaryOperator):
 	def add_to_block(self, block):
 		self.left.add_to_block(block)
 
@@ -422,17 +472,20 @@ class Add(AbstractExpr):
 
 		return (None, injected_stmts)
 
-	def has_side_effects(self):
-		return self.left.has_side_effects() or self.right.has_side_effects()
-
-	def get_namespace(self):
-		ns_l = self.left.get_namespace()
-		ns_r = self.right.get_namespace()
-		ns_l.merge(ns_r)
-		return ns_l
-
 	def __repr__(self):
 		return ("Add("
+			+ repr(self.left) + ", "
+			+ repr(self.right) + ")")
+
+class CompareEq(AbstractBinaryOperator):
+	def __repr__(self):
+		return ("CompareEq("
+			+ repr(self.left) + ", "
+			+ repr(self.right) + ")")
+
+class CompareNe(AbstractBinaryOperator):
+	def __repr__(self):
+		return ("CompareNe("
 			+ repr(self.left) + ", "
 			+ repr(self.right) + ")")
 
