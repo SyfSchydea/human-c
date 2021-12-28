@@ -12,6 +12,7 @@ tokens = (
 	"INPUT",
 	"OUTPUT",
 	"IF",
+	"ELSE",
 	"FOREVER",
 
 	"IDENTIFIER",
@@ -38,9 +39,10 @@ t_INIT    = r"init"
 t_INPUT   = r"input"
 t_OUTPUT  = r"output"
 t_IF      = r"if"
+t_ELSE    = r"else"
 t_FOREVER = r"forever"
 
-t_IDENTIFIER = (r"(?!(?:let|forever|input|output|init|if)"
+t_IDENTIFIER = (r"(?!(?:let|forever|input|output|init|if|else)"
 	+ r"[^a-zA-Z_\d])[a-zA-Z_][a-zA-Z_\d]*")
 
 def t_NUMBER(t):
