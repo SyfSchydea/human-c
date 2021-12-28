@@ -175,6 +175,12 @@ class StatementList:
 
 		return ns
 
+	def get_last_stmt(self):
+		if len(self.stmts) == 0:
+			return None
+
+		return self.stmts[-1]
+
 	def __init__(self, stmts=None):
 		self.stmts = stmts
 		if self.stmts is None:
@@ -216,19 +222,25 @@ class If(AbstractLine):
 	__slots__ = [
 		"condition",
 		"then_block",
+		"else_block",
 	]
 
-	def __init__(self, cond, then_block=None):
+	def __init__(self, cond, then_block=None, else_block=None):
 		self.condition = cond
 		self.then_block = then_block
+		self.else_block = else_block
 
 		if self.then_block is None:
 			self.then_block = StatementList()
 
 	def __repr__(self):
-		return ("If("
-			+ repr(self.condition) + ", "
-			+ repr(self.then_block) + ")")
+		s = "If(" + repr(self.condition)
+		s += ", " + repr(self.then_block)
+
+		if self.else_block is not None:
+			s += ", " + repr(self.else_block)
+
+		return s + ")"
 
 # Pseudo node used in parsing
 class Else(AbstractLine):

@@ -80,12 +80,26 @@ def nest_lines(line_list):
 			else:
 				raise HCParseError("Invalid indent")
 
+		if isinstance(line, ast.Else):
+			last_if = stack[-1].statements.get_last_stmt()
+			if not isinstance(last_if, ast.If):
+				raise HCParseError("Else statement has no matching If statement")
+
+			if last_if.else_block is not None:
+				raise HCParseError("If statement has multiple Else statements")
+
+			last_if.else_block = ast.StatementList()
+			stack.append(StackEntry(last_if.else_block))
+			continue
+
 		# Append self to tree
 		stack[-1].statements.append(line)
 
 		# Add self to stack if expected sub-statements
 		if isinstance(line, ast.Forever):
 			stack.append(StackEntry(line.body))
+		elif isinstance(line, ast.If):
+			stack.append(StackEntry(line.then_block))
 	
 	return stack[0].statements
 
