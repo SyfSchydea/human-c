@@ -21,6 +21,42 @@ def generate_name(idx):
 		if idx == 0:
 			return name
 
+# Generate a function which will validate an expression
+# Function returns a tuple of:
+# (
+#	AbstractExpr to replace this expression with. May be the same expression,
+#	List of statements to inject before the containing statement in order to prepare for this expression.
+# )
+def get_validate_func(method_name):
+	def validate_func(expr, namespace):
+		if not hasattr(expr, method_name):
+			raise HCTypeError("Expression cannot be validated", expr)
+		
+		new_expr, injected_stmts = getattr(expr, method_name)(namespace)
+
+		# Individual validate functions may return new_expr=None to mean, don't replace anything
+		if new_expr is None:
+			new_expr = expr
+		elif not isinstance(new_expr, AbstractExpr):
+			raise HCInternalError("Unexpected expression replacement type")
+
+		# Individual validate functions may return a single AbstractLine, None, or an iterable of AbstractLines
+		if isinstance(injected_stmts, AbstractLine):
+			injected_stmts = [injected_stmts]
+		elif injected_stmts is None:
+			injected_stmts = []
+		elif all(isinstance(s, AbstractLine) for s in injected_stmts):
+			injected_stmts = [*injected_stmts]
+		else:
+			raise HCInternalError("Unexpected injected statements type", injected_stmts)
+
+		return (new_expr, injected_stmts)
+	
+	return validate_func
+
+validate_expr_branchable = get_validate_func("validate_branchable")
+validate_expr            = get_validate_func("validate")
+
 class AbstractLine:
 	__slots__ = [
 		"indent",
@@ -233,6 +269,25 @@ class If(AbstractLine):
 		if self.then_block is None:
 			self.then_block = StatementList()
 
+	def get_namespace(self):
+		ns = self.condition.get_namespace()
+		ns.merge(self.then_block.get_namespace())
+
+		if self.else_block is not None:
+			ns.merge(self.else_block.get_namespace())
+
+		return ns
+
+	def validate(self, namespace):
+		self.condition, injected_stmts = validate_expr_branchable(self.condition, namespace)
+
+		self.then_block.validate_structure(namespace)
+		if self.else_block is not None:
+			self.else_block.validate_structure(namespace)
+
+		injected_stmts.append(self)
+		return injected_stmts
+
 	def __repr__(self):
 		s = "If(" + repr(self.condition)
 		s += ", " + repr(self.then_block)
@@ -255,22 +310,9 @@ class AbstractLineWithExpr(AbstractLine):
 		self.expr = expr
 
 	def validate(self, namespace):
-		new_expr, injected_stmts = self.expr.validate(namespace)
-		if isinstance(new_expr, AbstractExpr):
-			self.expr = new_expr
-		elif new_expr is not None:
-			raise HCInternalError("Unexpected expression replacement type", new_expr)
-
-		if isinstance(injected_stmts, AbstractLine):
-			injected_stmts = [injected_stmts]
-
-		if (isinstance(injected_stmts, list)
-				and all(isinstance(s, AbstractLine) for s in injected_stmts)):
-			return [*injected_stmts, self]
-		elif injected_stmts is None:
-			return None
-		else:
-			raise HCInternalError("Unexpected injected statements type", injected_stmts)
+		self.expr, injected_stmts = validate_expr(self.expr, namespace)
+		injected_stmts.append(self)
+		return injected_stmts
 
 	def get_namespace(self):
 		return self.expr.get_namespace()
@@ -330,19 +372,7 @@ class Assignment(AbstractExpr):
 		self.expr = expr
 
 	def validate(self, namespace):
-		new_expr, injected_stmts = self.expr.validate(namespace)
-
-		if isinstance(new_expr, AbstractExpr):
-			self.expr = new_expr
-		elif new_expr is not None:
-			raise HCInternalError("Unexpected expression replacement type", new_expr)
-
-		if isinstance(injected_stmts, AbstractLine):
-			injected_stmts = [injected_stmts]
-		elif injected_stmts is None:
-			return (None, None)
-
-		injected_stmts.append(self)
+		self.expr, injected_stmts = validate_expr(self.expr, namespace)
 		return (None, injected_stmts)
 
 	def get_namespace(self):
@@ -495,12 +525,35 @@ class Add(AbstractBinaryOperator):
 			+ repr(self.right) + ")")
 
 class CompareEq(AbstractBinaryOperator):
+	def validate_branchable(self, namespace):
+		self.left, injected_stmts = validate_expr(self.left, namespace)
+
+		if isinstance(self.right, Number) and self.right.value == 0:
+			return (None, injected_stmts)
+		else:
+			raise HCInternalError("Cannot make comparison branchable", self)
+
+		# TODO: Check if swapping operands will solve the problem
+			# ie. left is 0, right is validated expr
+		# TODO: Check for constants on both sides
+
 	def __repr__(self):
 		return ("CompareEq("
 			+ repr(self.left) + ", "
 			+ repr(self.right) + ")")
 
 class CompareNe(AbstractBinaryOperator):
+	def validate_branchable(self, namespace):
+		self.left, injected_stmts = validate_expr(self.left, namespace)
+
+		if isinstance(self.right, Number) and self.right.value == 0:
+			return (None, injected_stmts)
+		else:
+			raise HCInternalError("Cannot make comparison branchable", self)
+
+		# TODO: Check if swapping operands will solve the problem
+		# TODO: Check for constants on both sides
+
 	def __repr__(self):
 		return ("CompareNe("
 			+ repr(self.left) + ", "
