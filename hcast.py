@@ -226,9 +226,14 @@ class If(AbstractLine):
 			self.then_block = StatementList()
 
 	def __repr__(self):
-		return ("Forever("
+		return ("If("
 			+ repr(self.condition) + ", "
 			+ repr(self.then_block) + ")")
+
+# Pseudo node used in parsing
+class Else(AbstractLine):
+	def __repr__(self):
+		return "Else()"
 
 class AbstractLineWithExpr(AbstractLine):
 	__slots = ["expr"]

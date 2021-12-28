@@ -55,6 +55,10 @@ def p_keyword_if(p):
 	"if : IF optws"
 	pass
 
+def p_keyword_else(p):
+	"else : ELSE optws"
+	pass
+
 def p_keyword_output(p):
 	"output : OUTPUT optws"
 	pass
@@ -106,6 +110,10 @@ def p_forever(p):
 def p_if(p):
 	"stmt : if expr"
 	p[0] = ast.If(p[2])
+
+def p_else(p):
+	"stmt : else"
+	p[0] = ast.Else()
 
 def p_output(p):
 	"stmt : output expr"
