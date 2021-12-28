@@ -142,12 +142,21 @@ class MemoryLocation:
 
 # Sequence of AbstractLine objects, to be run in order
 class StatementList:
-	__slots__ = ["stmts"]
+	__slots__ = [
+		"stmts",
+
+		"first_block",
+		"last_block",
+	]
 
 	def append(self, stmt):
 		self.stmts.append(stmt)
 
 	def create_blocks(self):
+		if len(self.stmts) == 0:
+			self.first_block = self.last_block = hrmi.Block()
+			return
+
 		for stmt in self.stmts:
 			stmt.create_block()
 
@@ -156,6 +165,9 @@ class StatementList:
 			self.stmts[i - 1].block.assign_next(self.stmts[i].block)
 		
 		# Last block is left with no jump specified
+
+		self.first_block = self.stmts[0].block
+		self.last_block = self.stmts[-1].block
 
 	# Look up memory locations of variables specified by the program
 	def get_memory_map(self):
@@ -269,6 +281,36 @@ class If(AbstractLine):
 		if self.then_block is None:
 			self.then_block = StatementList()
 
+	def create_block(self):
+		# Fill in empty else block
+		if self.else_block is None:
+			self.else_block = StatementList()
+
+		self.then_block.create_blocks()
+		self.else_block.create_blocks()
+
+		condition_block = hrmi.Block()
+
+		if not isinstance(self.condition, AbstractBinaryOperator):
+			raise HCInternalError("Unable to generate code for if statement with non-comparison condition")
+
+		self.condition.left.add_to_block(condition_block)
+
+		if not (isinstance(self.condition.right, Number) and self.condition.right.value == 0):
+			raise HCInternalError("Unable to directly compare to non-zero values", self)
+
+		then_bl = self.then_block
+		else_bl = self.else_block
+
+		negate = isinstance(self.condition, CompareNe)
+		if negate:
+			then_bl, else_bl = else_bl, then_bl
+
+		condition_block.assign_jz(then_bl.first_block)
+		condition_block.assign_next(else_bl.first_block)
+
+		self.block = hrmi.IfThenElseBlock(condition_block, self.then_block.last_block, self.else_block.last_block)
+
 	def get_namespace(self):
 		ns = self.condition.get_namespace()
 		ns.merge(self.then_block.get_namespace())
@@ -322,7 +364,7 @@ class Output(AbstractLineWithExpr):
 	__slots__ = ["expr"]
 
 	def create_block(self):
-		self.block = hrmi.Block();
+		self.block = hrmi.Block()
 		self.expr.add_to_block(self.block)
 		self.block.add_instruction(hrmi.Output())
 
@@ -333,7 +375,7 @@ class Output(AbstractLineWithExpr):
 
 class ExprLine(AbstractLineWithExpr):
 	def create_block(self):
-		self.block = hrmi.Block();
+		self.block = hrmi.Block()
 		self.expr.add_to_block(self.block)
 
 	def __repr__(self):

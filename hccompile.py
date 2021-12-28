@@ -29,11 +29,11 @@ def extract_blocks(stmt_list):
 		block.set_label(generate_name(names_assigned))
 		names_assigned += 1
 
+		if block.conditional is not None:
+			nodes_to_check.append(block.conditional.dest)
 		if block.next is not None:
 			nodes_to_check.append(block.next.dest)
 
-		# TODO: Also check for conditional jumps when they're implemented
-	
 	return blocks
 
 def mark_implicit_jumps(blocks):
@@ -95,7 +95,15 @@ def main():
 	tree.validate_structure(namespace)
 
 	tree.create_blocks()
+	end_block = hrmi.Block()
+	tree.last_block.assign_next(end_block)
+
 	blocks = extract_blocks(tree)
+
+	# Ensure end block is at the end, if it's still present
+	if end_block in blocks:
+		blocks.remove(end_block)
+		blocks.append(end_block)
 
 	assign_memory(blocks, initial_memory_map)
 
