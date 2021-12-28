@@ -471,6 +471,9 @@ class Number(AbstractExpr):
 		return ("Number("
 			+ repr(self.value) + ")")
 
+def is_zero(expr):
+	return isinstance(expr, Number) and expr.value == 0
+
 class Input(AbstractExpr):
 	def add_to_block(self, block):
 		block.add_instruction(hrmi.Input())
@@ -566,11 +569,15 @@ class Add(AbstractBinaryOperator):
 			+ repr(self.left) + ", "
 			+ repr(self.right) + ")")
 
-class CompareEq(AbstractBinaryOperator):
+class AbstractEqualityOperator(AbstractBinaryOperator):
 	def validate_branchable(self, namespace):
 		self.left, injected_stmts = validate_expr(self.left, namespace)
+		self.right, injected_stmts = validate_expr(self.right, namespace)
 
-		if isinstance(self.right, Number) and self.right.value == 0:
+		if is_zero(self.right):
+			return (None, injected_stmts)
+		elif is_zero(self.left):
+			self.left, self.right = self.right, self.left
 			return (None, injected_stmts)
 		else:
 			raise HCInternalError("Cannot make comparison branchable", self)
@@ -580,26 +587,15 @@ class CompareEq(AbstractBinaryOperator):
 		# TODO: Check for constants on both sides
 
 	def __repr__(self):
-		return ("CompareEq("
+		return (type(self).__name__ + "("
 			+ repr(self.left) + ", "
 			+ repr(self.right) + ")")
 
-class CompareNe(AbstractBinaryOperator):
-	def validate_branchable(self, namespace):
-		self.left, injected_stmts = validate_expr(self.left, namespace)
+class CompareEq(AbstractEqualityOperator):
+	pass
 
-		if isinstance(self.right, Number) and self.right.value == 0:
-			return (None, injected_stmts)
-		else:
-			raise HCInternalError("Cannot make comparison branchable", self)
-
-		# TODO: Check if swapping operands will solve the problem
-		# TODO: Check for constants on both sides
-
-	def __repr__(self):
-		return ("CompareNe("
-			+ repr(self.left) + ", "
-			+ repr(self.right) + ")")
+class CompareNe(AbstractEqualityOperator):
+	pass
 
 # Collection of names used in a part or whole of the program
 class Namespace:
