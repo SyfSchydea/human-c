@@ -58,6 +58,10 @@ class Block:
 		"next",
 		"label",
 		"jumps_in",
+
+		# Properties used in hands tracking
+		"hands_at_start",
+		"hand_data_propagated",
 	]
 
 	def __init__(self):
