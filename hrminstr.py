@@ -2,6 +2,21 @@ class HRMIInternalError(Exception):
 	pass
 
 class HRMInstruction:
+	# Should be overriden to true for instructions which
+	# require a variable to be set to a value
+	reads_variable = False
+
+	__slots__ = [
+		# List of variables used during this instruction.
+		# These variables are not necessarily used directly by this
+		# instruction, but their values must be held during the execution
+		# of this instruction.
+		"variables_used",
+	]
+
+	def __init__(self):
+		self.variables_used = []
+
 	def to_asm(self):
 		raise NotImplementedError("HRMInstruction.to_asm", self)
 
@@ -14,6 +29,13 @@ class HRMInstruction:
 	# by the calculated hands state.
 	# This is false in the majority of cases
 	def hands_redundant(self, hands_before):
+		return False
+
+	# Should return true if this instruction is used to set
+	# a variable to a value, but that value will not be used,
+	# rendering the instruction redundant.
+	# False for most instructions.
+	def var_redundant(self):
 		return False
 
 class Input(HRMInstruction):
@@ -40,6 +62,7 @@ class AbstractParameterisedInstruction(HRMInstruction):
 	__slots__ = ["loc"]
 
 	def __init__(self, loc):
+		super().__init__()
 		self.loc = loc
 
 class Save(AbstractParameterisedInstruction):
@@ -52,10 +75,17 @@ class Save(AbstractParameterisedInstruction):
 	def hands_redundant(self, hands_before):
 		return hands_before == VariableInHands(self.loc)
 
+	# This save instruction may be redundant if its
+	# variable will not have its value used again.
+	def var_redundant(self):
+		return self.loc not in self.variables_used
+
 	def __repr__(self):
 		return f"hrmi.Save({repr(self.loc)})"
 
 class Load(AbstractParameterisedInstruction):
+	reads_variable = True
+
 	def to_asm(self):
 		return "COPYFROM " + str(self.loc)
 
@@ -69,6 +99,8 @@ class Load(AbstractParameterisedInstruction):
 		return f"hrmi.Load({repr(self.loc)})"
 
 class Add(AbstractParameterisedInstruction):
+	reads_variable = True
+
 	def to_asm(self):
 		return "ADD " + str(self.loc)
 
