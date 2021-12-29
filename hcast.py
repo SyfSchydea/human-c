@@ -576,7 +576,6 @@ class Add(AbstractBinaryOperator):
 		
 			if self.right.has_side_effects():
 				var_name = namespace.get_unique_name()
-				print(var_name)
 				new_assign = ExprLine(Assignment(var_name, self.right))
 				injected_stmts.append(new_assign)
 				self.right = VariableRef(var_name)
