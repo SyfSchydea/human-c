@@ -49,6 +49,9 @@ class Save(AbstractParameterisedInstruction):
 	def simulate_hands(self, hands_before):
 		return VariableInHands(self.loc)
 
+	def hands_redundant(self, hands_before):
+		return hands_before == VariableInHands(self.loc)
+
 	def __repr__(self):
 		return f"hrmi.Save({repr(self.loc)})"
 
@@ -68,6 +71,9 @@ class Load(AbstractParameterisedInstruction):
 class Add(AbstractParameterisedInstruction):
 	def to_asm(self):
 		return "ADD " + str(self.loc)
+
+	def simulate_hands(self, hands_before):
+		return UnknownHands()
 
 	def __repr__(self):
 		return f"hrmi.Add({repr(self.loc)})"
@@ -283,12 +289,15 @@ class AbstractHands:
 		else:
 			return UnknownHands()
 
+# The processor has nothing in their hands
 class EmptyHands(AbstractHands):
 	pass
 
+# We don't know anything about what the processor has in their hands
 class UnknownHands(AbstractHands):
 	pass
 
+# The processor is holding a value which matches the value of a variable
 class VariableInHands(AbstractHands):
 	__slots__ = ["name"]
 

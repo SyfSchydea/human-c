@@ -60,9 +60,10 @@ def optimise_hands_tracking(blocks):
 			blocks_to_check.append(cond_block)
 
 		# Propagate through the unconditional
-		next_block = blk.next.dest
-		next_block.update_hands(hands)
-		blocks_to_check.append(next_block)
+		if blk.next is not None:
+			next_block = blk.next.dest
+			next_block.update_hands(hands)
+			blocks_to_check.append(next_block)
 
 		blk.hand_data_propagated = True
 
