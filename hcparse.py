@@ -51,6 +51,14 @@ def p_keyword_forever(p):
 	"forever : FOREVER optws"
 	pass
 
+def p_keyword_if(p):
+	"if : IF optws"
+	pass
+
+def p_keyword_else(p):
+	"else : ELSE optws"
+	pass
+
 def p_keyword_output(p):
 	"output : OUTPUT optws"
 	pass
@@ -69,6 +77,14 @@ def p_operator_equals(p):
 
 def p_operator_add(p):
 	"add : ADD optws"
+	pass
+
+def p_operator_eq(p):
+	"cmp_eq : DBL_EQUALS optws"
+	pass
+
+def p_operator_ne(p):
+	"cmp_ne : NOT_EQUALS optws"
 	pass
 
 def p_identifier(p):
@@ -91,6 +107,14 @@ def p_forever(p):
 	"stmt : forever"
 	p[0] = ast.Forever()
 
+def p_if(p):
+	"stmt : if expr"
+	p[0] = ast.If(p[2])
+
+def p_else(p):
+	"stmt : else"
+	p[0] = ast.Else()
+
 def p_output(p):
 	"stmt : output expr"
 	p[0] = ast.Output(p[2])
@@ -107,23 +131,40 @@ def p_no_assign(p):
 	"expr_assign : expr"
 	p[0] = p[1]
 
+def p_eq(p):
+	"expr : expr cmp_eq expr_s"
+	p[0] = ast.CompareEq(p[1], p[3])
+
+def p_ne(p):
+	"expr : expr cmp_ne expr_s"
+	p[0] = ast.CompareNe(p[1], p[3])
+
+def p_expr_s(p):
+	"expr : expr_s"
+	p[0] = p[1]
+
 def p_expr_v(p):
-	"expr : expr_v"
+	"expr_s : expr_v"
 	p[0] = p[1]
 
 def p_add(p):
-	"expr : expr add expr_v"
+	"expr_s : expr_s add expr_v"
 	p[0] = ast.Add(p[1], p[3])
 
 def p_input(p):
 	"expr_v : input"
 	p[0] = ast.Input()
 
+def p_num(p):
+	"expr_v : number"
+	p[0] = ast.Number(p[1])
+
 def p_var(p):
 	"expr_v : name"
 	p[0] = ast.VariableRef(p[1])
 
 precedence = (
+	("left", "DBL_EQUALS", "NOT_EQUALS"),
 	("right", "EQUALS"),
 	("left",  "ADD"),
 )

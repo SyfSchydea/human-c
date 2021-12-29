@@ -1,3 +1,6 @@
+class HRMIInternalError(Exception):
+	pass
+
 class HRMInstruction:
 	def to_asm(self):
 		raise NotImplementedError("HRMInstruction.to_asm", self)
@@ -46,11 +49,12 @@ class Add(AbstractParameterisedInstruction):
 # Block of instructions
 # A block consists of
 #  * a series of linear instructions (non jumps),
-#  * a series of up to two conditional jumps
+#  * an optional conditional jump
 #  * an unconditional jump
 class Block:
 	__slots__ = [
 		"instructions",
+		"conditional",
 		"next",
 		"label",
 		"jumps_in",
@@ -59,12 +63,13 @@ class Block:
 	def __init__(self):
 		self.instructions = []
 		self.jumps_in = []
+		self.conditional = None
 		self.next = None
 		self.label = None
 	
 	def needs_label(self):
 		for jmp in self.jumps_in:
-			if not jmp.implicit:
+			if not (isinstance(jmp, Jump) and jmp.implicit):
 				return True
 
 		return False
@@ -78,6 +83,9 @@ class Block:
 		for inst in self.instructions:
 			lines.append(inst.to_asm())
 
+		if self.conditional is not None:
+			lines.append(self.conditional.to_asm())
+
 		if self.next is not None and not self.next.implicit:
 			lines.append(self.next.to_asm())
 
@@ -87,14 +95,32 @@ class Block:
 		self.instructions.append(instr)
 	
 	def assign_next(self, next_block):
-		if isinstance(next_block, ForeverBlock):
+		if self.next is not None:
+			raise HRMIInternalError("Attempted to assign mulitple unconditional jumps to block")
+
+		while isinstance(next_block, CompoundBlock):
 			next_block = next_block.first_block
 
 		jmp = Jump(self, next_block)
 
 		self.next = jmp
-		next_block.jumps_in.append(jmp)
-	
+		next_block.register_jump_in(jmp)
+
+	def assign_jz(self, next_block):
+		if self.conditional is not None:
+			raise HRMIInternalError("Attempted to assign mulitple conditional jumps to block")
+
+		if isinstance(next_block, CompoundBlock):
+			next_block = next_block.first_block
+
+		jz = JumpZero(self, next_block)
+
+		self.conditional = jz
+		next_block.register_jump_in(jz)
+
+	def register_jump_in(self, jump):
+		self.jumps_in.append(jump)
+
 	def set_label(self, label):
 		self.label = label
 	
@@ -102,45 +128,75 @@ class Block:
 		return ("Block("
 			+ repr(self.instructions) + ")")
 
-# Represents a jump from the end of one block to another
-class Jump:
+class AbstractJump:
 	__slots__ = [
 		# References to source and destination blocks
 		"src",
 		"dest",
-
-		# True if the two blocks are adjacent, meaning no jmp instruction is needed
-		"implicit",
 	]
 
 	def __init__(self, src, dest):
 		self.src = src
 		self.dest = dest
 
+	def __repr__(self):
+		return f"{type(self).__name__}({self.src.label}, {self.dest.label})"
+
+# Represents a jump from the end of one block to another
+class Jump(AbstractJump):
+	__slots__ = [
+		# True if the two blocks are adjacent, meaning no jmp instruction is needed
+		"implicit",
+	]
+
+	def __init__(self, src, dest):
+		super().__init__(src, dest)
+
 		self.implicit = False
 	
 	def to_asm(self):
 		return "JUMP " + self.dest.label
-	
-	def __repr__(self):
-		return f"Jump({self.src.label}, {self.dest.label})"
 
-# Pseudo-Block for forever blocks
-# Contains a reference to the first block in the body of the loop
-class ForeverBlock:
+class JumpZero(AbstractJump):
+	def to_asm(self):
+		return "JUMPZ " + self.dest.label
+
+# Pseudo blocks used to represent the multiple blocks involved
+# in control flow statements such as 'forever', or 'if'
+class CompoundBlock:
 	__slots__ = [
+		# Entry point into this block
 		"first_block",
+
+		# List of exit points out of this block
+		"exit_points",
 	]
 
-	def __init__(self, block):
-		self.first_block = block
-	
+	def __init__(self, first_block, exit_points=None):
+		self.first_block = first_block
+		self.exit_points = exit_points
+		if self.exit_points is None:
+			self.exit_points = []
+
 	def add_instruction(self, instr):
-		raise TypeError("Cannot add instruction directly to a ForeverBlock")
+		raise TypeError("Cannot add instruction directly to a Compound Block")
 
 	def assign_next(self, next_block):
-		# No error as this will one day be important once break is implemented
-		pass
-	
+		for block in self.exit_points:
+			block.assign_next(next_block)
+
+	def register_jump_in(self, jump):
+		self.first_block.register_jump_in(jump)
+
 	def __repr__(self):
-		return "ForeverBlock(" + repr(self.first_block) + ")"
+		return (type(self).__name__ + "("
+			+ repr(self.first_block) + ", "
+			+ repr(self.exit_points) + ")")
+
+class ForeverBlock(CompoundBlock):
+	def __init__(self, block):
+		super().__init__(block)
+
+class IfThenElseBlock(CompoundBlock):
+	def __init__(self, block, then_exit, else_exit):
+		super().__init__(block, [then_exit, else_exit])

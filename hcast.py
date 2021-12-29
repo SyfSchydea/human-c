@@ -21,6 +21,42 @@ def generate_name(idx):
 		if idx == 0:
 			return name
 
+# Generate a function which will validate an expression
+# Function returns a tuple of:
+# (
+#	AbstractExpr to replace this expression with. May be the same expression,
+#	List of statements to inject before the containing statement in order to prepare for this expression.
+# )
+def get_validate_func(method_name):
+	def validate_func(expr, namespace):
+		if not hasattr(expr, method_name):
+			raise HCTypeError("Expression cannot be validated", expr)
+		
+		new_expr, injected_stmts = getattr(expr, method_name)(namespace)
+
+		# Individual validate functions may return new_expr=None to mean, don't replace anything
+		if new_expr is None:
+			new_expr = expr
+		elif not isinstance(new_expr, AbstractExpr):
+			raise HCInternalError("Unexpected expression replacement type")
+
+		# Individual validate functions may return a single AbstractLine, None, or an iterable of AbstractLines
+		if isinstance(injected_stmts, AbstractLine):
+			injected_stmts = [injected_stmts]
+		elif injected_stmts is None:
+			injected_stmts = []
+		elif all(isinstance(s, AbstractLine) for s in injected_stmts):
+			injected_stmts = [*injected_stmts]
+		else:
+			raise HCInternalError("Unexpected injected statements type", injected_stmts)
+
+		return (new_expr, injected_stmts)
+	
+	return validate_func
+
+validate_expr_branchable = get_validate_func("validate_branchable")
+validate_expr            = get_validate_func("validate")
+
 class AbstractLine:
 	__slots__ = [
 		"indent",
@@ -106,12 +142,21 @@ class MemoryLocation:
 
 # Sequence of AbstractLine objects, to be run in order
 class StatementList:
-	__slots__ = ["stmts"]
+	__slots__ = [
+		"stmts",
+
+		"first_block",
+		"last_block",
+	]
 
 	def append(self, stmt):
 		self.stmts.append(stmt)
 
 	def create_blocks(self):
+		if len(self.stmts) == 0:
+			self.first_block = self.last_block = hrmi.Block()
+			return
+
 		for stmt in self.stmts:
 			stmt.create_block()
 
@@ -120,6 +165,9 @@ class StatementList:
 			self.stmts[i - 1].block.assign_next(self.stmts[i].block)
 		
 		# Last block is left with no jump specified
+
+		self.first_block = self.stmts[0].block
+		self.last_block = self.stmts[-1].block
 
 	# Look up memory locations of variables specified by the program
 	def get_memory_map(self):
@@ -175,6 +223,12 @@ class StatementList:
 
 		return ns
 
+	def get_last_stmt(self):
+		if len(self.stmts) == 0:
+			return None
+
+		return self.stmts[-1]
+
 	def __init__(self, stmts=None):
 		self.stmts = stmts
 		if self.stmts is None:
@@ -212,6 +266,94 @@ class Forever(AbstractLine):
 	def __repr__(self):
 		return f"Forever({repr(self.body)})"
 
+class If(AbstractLine):
+	__slots__ = [
+		"condition",
+		"then_block",
+		"else_block",
+	]
+
+	def __init__(self, cond, then_block=None, else_block=None):
+		self.condition = cond
+		self.then_block = then_block
+		self.else_block = else_block
+
+		if self.then_block is None:
+			self.then_block = StatementList()
+
+	def create_block(self):
+		# Fill in empty else block
+		if self.else_block is None:
+			self.else_block = StatementList()
+
+		self.then_block.create_blocks()
+		self.else_block.create_blocks()
+
+		condition_block = hrmi.Block()
+
+		if isinstance(self.condition, Boolean):
+			if self.condition.value:
+				code_block = self.then_block
+			else:
+				code_block = self.else_block
+
+			condition_block.assign_next(code_block.first_block)
+			self.block = hrmi.CompoundBlock(code_block.first_block, [code_block.last_block])
+
+		elif isinstance(self.condition, AbstractBinaryOperator):
+			self.condition.left.add_to_block(condition_block)
+
+			if not (isinstance(self.condition.right, Number) and self.condition.right.value == 0):
+				raise HCInternalError("Unable to directly compare to non-zero values", self)
+
+			then_bl = self.then_block
+			else_bl = self.else_block
+
+			negate = isinstance(self.condition, CompareNe)
+			if negate:
+				then_bl, else_bl = else_bl, then_bl
+
+			condition_block.assign_jz(then_bl.first_block)
+			condition_block.assign_next(else_bl.first_block)
+
+			self.block = hrmi.IfThenElseBlock(condition_block, self.then_block.last_block, self.else_block.last_block)
+
+		else:
+			raise HCInternalError("Unable to generate code for if statement with non-comparison condition", self.condition)
+
+	def get_namespace(self):
+		ns = self.condition.get_namespace()
+		ns.merge(self.then_block.get_namespace())
+
+		if self.else_block is not None:
+			ns.merge(self.else_block.get_namespace())
+
+		return ns
+
+	def validate(self, namespace):
+		self.condition, injected_stmts = validate_expr_branchable(self.condition, namespace)
+
+		self.then_block.validate_structure(namespace)
+		if self.else_block is not None:
+			self.else_block.validate_structure(namespace)
+
+		injected_stmts.append(self)
+		return injected_stmts
+
+	def __repr__(self):
+		s = "If(" + repr(self.condition)
+		s += ", " + repr(self.then_block)
+
+		if self.else_block is not None:
+			s += ", " + repr(self.else_block)
+
+		return s + ")"
+
+# Pseudo node used in parsing
+class Else(AbstractLine):
+	def __repr__(self):
+		return "Else()"
+
 class AbstractLineWithExpr(AbstractLine):
 	__slots = ["expr"]
 
@@ -220,22 +362,9 @@ class AbstractLineWithExpr(AbstractLine):
 		self.expr = expr
 
 	def validate(self, namespace):
-		new_expr, injected_stmts = self.expr.validate(namespace)
-		if isinstance(new_expr, AbstractExpr):
-			self.expr = new_expr
-		elif new_expr is not None:
-			raise HCInternalError("Unexpected expression replacement type", new_expr)
-
-		if isinstance(injected_stmts, AbstractLine):
-			injected_stmts = [injected_stmts]
-
-		if (isinstance(injected_stmts, list)
-				and all(isinstance(s, AbstractLine) for s in injected_stmts)):
-			return [*injected_stmts, self]
-		elif injected_stmts is None:
-			return None
-		else:
-			raise HCInternalError("Unexpected injected statements type", injected_stmts)
+		self.expr, injected_stmts = validate_expr(self.expr, namespace)
+		injected_stmts.append(self)
+		return injected_stmts
 
 	def get_namespace(self):
 		return self.expr.get_namespace()
@@ -245,7 +374,7 @@ class Output(AbstractLineWithExpr):
 	__slots__ = ["expr"]
 
 	def create_block(self):
-		self.block = hrmi.Block();
+		self.block = hrmi.Block()
 		self.expr.add_to_block(self.block)
 		self.block.add_instruction(hrmi.Output())
 
@@ -256,7 +385,7 @@ class Output(AbstractLineWithExpr):
 
 class ExprLine(AbstractLineWithExpr):
 	def create_block(self):
-		self.block = hrmi.Block();
+		self.block = hrmi.Block()
 		self.expr.add_to_block(self.block)
 
 	def __repr__(self):
@@ -295,19 +424,7 @@ class Assignment(AbstractExpr):
 		self.expr = expr
 
 	def validate(self, namespace):
-		new_expr, injected_stmts = self.expr.validate(namespace)
-
-		if isinstance(new_expr, AbstractExpr):
-			self.expr = new_expr
-		elif new_expr is not None:
-			raise HCInternalError("Unexpected expression replacement type", new_expr)
-
-		if isinstance(injected_stmts, AbstractLine):
-			injected_stmts = [injected_stmts]
-		elif injected_stmts is None:
-			return (None, None)
-
-		injected_stmts.append(self)
+		self.expr, injected_stmts = validate_expr(self.expr, namespace)
 		return (None, injected_stmts)
 
 	def get_namespace(self):
@@ -342,6 +459,44 @@ class VariableRef(AbstractExpr):
 		return ("VariableRef("
 			+ repr(self.name) + ")")
 
+class Number(AbstractExpr):
+	__slots__ = ["value"]
+
+	def __init__(self, value):
+		self.value = value
+
+	def add_to_block(self, block):
+		raise HCTypeError("Cannot conjure arbitrary numbers")
+
+	def validate(self, namespace):
+		return (None, None)
+
+	def has_side_effects(self):
+		return False
+
+	def get_namespace(self):
+		return Namespace()
+
+	def __repr__(self):
+		return ("Number("
+			+ repr(self.value) + ")")
+
+def is_zero(expr):
+	return isinstance(expr, Number) and expr.value == 0
+
+# Boolean value.
+# Currently not directly producable by the source code
+class Boolean(AbstractExpr):
+	__slots__ = ["value"]
+
+	def __init__(self, value):
+		self.value = value
+
+	def __repr__(self):
+		return ("Boolean("
+			+ repr(self.value) + ")")
+
+
 class Input(AbstractExpr):
 	def add_to_block(self, block):
 		block.add_instruction(hrmi.Input())
@@ -358,9 +513,9 @@ class Input(AbstractExpr):
 	def __repr__(self):
 		return "Input()"
 
-class Add(AbstractExpr):
+# Any operator with a left and right operand
+class AbstractBinaryOperator(AbstractExpr):
 	__slots__ = [
-		# Expressions on the left and right side of the operator
 		"left",
 		"right",
 	]
@@ -369,6 +524,16 @@ class Add(AbstractExpr):
 		self.left = left
 		self.right = right
 
+	def has_side_effects(self):
+		return self.left.has_side_effects() or self.right.has_side_effects()
+
+	def get_namespace(self):
+		ns_l = self.left.get_namespace()
+		ns_r = self.right.get_namespace()
+		ns_l.merge(ns_r)
+		return ns_l
+
+class Add(AbstractBinaryOperator):
 	def add_to_block(self, block):
 		self.left.add_to_block(block)
 
@@ -382,20 +547,16 @@ class Add(AbstractExpr):
 		injected_stmts = []
 
 		while True:
-			# Recurse on left side
-			new_left, left_injected = self.left.validate(namespace)
-			if isinstance(new_left, AbstractExpr):
-				self.left = new_left
-			elif new_left is not None:
-				raise HCInternalError("Unexpected expression replacement type", new_left)
+			# Recurse on both operands
+			self.left, left_injected = validate_expr(self.left, namespace)
+			injected_stmts.extend(left_injected)
 
-			if isinstance(left_injected, AbstractLine):
-				injected_stmts.append(left_injected)
-			elif (isinstance(left_injected, list)
-					and all(isinstance(s, AbstractLine) for s in left_injected)):
-				injected_stmts.extend(left_injected)
-			elif left_injected is not None:
-				raise HCInternalError("Unexpected injected statements type", left_injected)
+			self.right, right_injected = validate_expr(self.right, namespace)
+			injected_stmts.extend(right_injected)
+
+			# Handle constant values
+			if isinstance(self.left, Number) and isinstance(self.right, Number):
+				return (Number(self.left.value + self.right.value), injected_stmts)
 
 			if isinstance(self.right, VariableRef):
 				break
@@ -422,19 +583,45 @@ class Add(AbstractExpr):
 
 		return (None, injected_stmts)
 
-	def has_side_effects(self):
-		return self.left.has_side_effects() or self.right.has_side_effects()
-
-	def get_namespace(self):
-		ns_l = self.left.get_namespace()
-		ns_r = self.right.get_namespace()
-		ns_l.merge(ns_r)
-		return ns_l
-
 	def __repr__(self):
 		return ("Add("
 			+ repr(self.left) + ", "
 			+ repr(self.right) + ")")
+
+class AbstractEqualityOperator(AbstractBinaryOperator):
+	negate = False
+
+	def validate_branchable(self, namespace):
+		self.left, injected_stmts = validate_expr(self.left, namespace)
+		self.right, injected_stmts = validate_expr(self.right, namespace)
+
+		if isinstance(self.left, Number) and isinstance(self.right, Number):
+			value = self.left.value == self.right.value
+			if self.negate:
+				value = not value
+			return (Boolean(value), None)
+		elif is_zero(self.right):
+			return (None, injected_stmts)
+		elif is_zero(self.left):
+			self.left, self.right = self.right, self.left
+			return (None, injected_stmts)
+		else:
+			raise HCInternalError("Cannot make comparison branchable", self)
+
+		# TODO: Check if swapping operands will solve the problem
+			# ie. left is 0, right is validated expr
+		# TODO: Check for constants on both sides
+
+	def __repr__(self):
+		return (type(self).__name__ + "("
+			+ repr(self.left) + ", "
+			+ repr(self.right) + ")")
+
+class CompareEq(AbstractEqualityOperator):
+	pass
+
+class CompareNe(AbstractEqualityOperator):
+	negate = True
 
 # Collection of names used in a part or whole of the program
 class Namespace:
