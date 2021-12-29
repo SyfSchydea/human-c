@@ -36,6 +36,51 @@ def extract_blocks(stmt_list):
 
 	return blocks
 
+# Optimise code by tracking what the state of the
+# hands will be at each stage in the code.
+def optimise_hands_tracking(blocks):
+	# First, ensure all hands_at_start values are accurate
+	blocks[0].update_hands(hrmi.EmptyHands())
+	blocks_to_check = [blocks[0]]
+
+	while len(blocks_to_check) > 0:
+		blk = blocks_to_check.pop()
+		if blk.hand_data_propagated:
+			continue
+
+		hands = blk.hands_at_start
+		for instr in blk.instructions:
+			hands = instr.simulate_hands(hands)
+
+		# Propagate through both possible paths of the conditional jump
+		if blk.conditional is not None:
+			hands = blk.conditional.simulate_hands(hands)
+			cond_block = blk.conditional.dest
+			cond_block.update_hands(hands)
+			blocks_to_check.append(cond_block)
+
+		# Propagate through the unconditional
+		if blk.next is not None:
+			next_block = blk.next.dest
+			next_block.update_hands(hands)
+			blocks_to_check.append(next_block)
+
+		blk.hand_data_propagated = True
+
+	# Make optimisations based on calculated hand data
+	for blk in blocks:
+		hands = blk.hands_at_start
+
+		i = 0
+		while i < len(blk.instructions):
+			instr = blk.instructions[i]
+
+			if instr.hands_redundant(hands):
+				del blk.instructions[i]
+			else:
+				hands = instr.simulate_hands(hands)
+				i += 1
+
 # Removes blocks which are simply a trivial redirect to another block
 def collapse_redundant_blocks(blocks):
 	redundant_blocks = []
@@ -136,6 +181,8 @@ def main():
 	if end_block in blocks:
 		blocks.remove(end_block)
 		blocks.append(end_block)
+	
+	optimise_hands_tracking(blocks)
 
 	collapse_redundant_blocks(blocks)
 
