@@ -121,6 +121,12 @@ class Block:
 	def register_jump_in(self, jump):
 		self.jumps_in.append(jump)
 
+	def unregister_jump_in(self, jump):
+		if jump not in self.jumps_in:
+			raise ValueError("Specified jump not present", jump)
+
+		self.jumps_in.remove(jump)
+
 	def set_label(self, label):
 		self.label = label
 	
@@ -138,6 +144,11 @@ class AbstractJump:
 	def __init__(self, src, dest):
 		self.src = src
 		self.dest = dest
+
+	def redirect(self, new_dest):
+		self.dest.unregister_jump_in(self)
+		self.dest = new_dest
+		new_dest.register_jump_in(self)
 
 	def __repr__(self):
 		return f"{type(self).__name__}({self.src.label}, {self.dest.label})"

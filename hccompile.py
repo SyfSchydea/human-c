@@ -36,6 +36,38 @@ def extract_blocks(stmt_list):
 
 	return blocks
 
+# Removes blocks which are simply a trivial redirect to another block
+def collapse_redundant_blocks(blocks):
+	redundant_blocks = []
+
+	for block in blocks:
+		# If block has at least one instruction, it's not redundant
+		if len(block.instructions) > 0:
+			continue
+
+		# If it has a condition jump, it's not redundant
+		if block.conditional is not None:
+			continue
+
+		# If it has no unconditional jump, we can't reroute it (and it's
+		# probably the end block, which we don't want to get rid of)
+		if block.next is None:
+			continue
+
+		# But if it is redundant, redirect blocks
+		# which jump to it to skip past it
+		for jmp in block.jumps_in:
+			jmp.redirect(block.next.dest)
+
+		block.next.dest.unregister_jump_in(block.next)
+
+		# And add it to the list of redundant blocks,
+		# so we can remove it from the list later
+		redundant_blocks.append(block)
+	
+	for block in redundant_blocks:
+		blocks.remove(block)
+
 def mark_implicit_jumps(blocks):
 	for i in range(len(blocks) - 1):
 		if blocks[i].next is None:
@@ -104,6 +136,8 @@ def main():
 	if end_block in blocks:
 		blocks.remove(end_block)
 		blocks.append(end_block)
+
+	collapse_redundant_blocks(blocks)
 
 	assign_memory(blocks, initial_memory_map)
 
