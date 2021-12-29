@@ -91,11 +91,13 @@ def optimise_variable_needs(blocks):
 	# its value from, marking that in every instruction inbetween,
 	# that variable is in use.
 	for blk in blocks:
-		for instr in blk.instructions:
+		for i in range(len(blk.instructions)):
+			instr = blk.instructions[i]
+
 			if not instr.reads_variable:
 				continue
 
-			blk.back_propagate_variable_use(instr)
+			blk.back_propagate_variable_use(i, instr.loc)
 
 	# Iterate through each instruction in the program again.
 	for blk in blocks:
