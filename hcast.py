@@ -291,25 +291,35 @@ class If(AbstractLine):
 
 		condition_block = hrmi.Block()
 
-		if not isinstance(self.condition, AbstractBinaryOperator):
-			raise HCInternalError("Unable to generate code for if statement with non-comparison condition")
+		if isinstance(self.condition, Boolean):
+			if self.condition.value:
+				code_block = self.then_block
+			else:
+				code_block = self.else_block
 
-		self.condition.left.add_to_block(condition_block)
+			condition_block.assign_next(code_block.first_block)
+			self.block = hrmi.CompoundBlock(code_block.first_block, [code_block.last_block])
 
-		if not (isinstance(self.condition.right, Number) and self.condition.right.value == 0):
-			raise HCInternalError("Unable to directly compare to non-zero values", self)
+		elif isinstance(self.condition, AbstractBinaryOperator):
+			self.condition.left.add_to_block(condition_block)
 
-		then_bl = self.then_block
-		else_bl = self.else_block
+			if not (isinstance(self.condition.right, Number) and self.condition.right.value == 0):
+				raise HCInternalError("Unable to directly compare to non-zero values", self)
 
-		negate = isinstance(self.condition, CompareNe)
-		if negate:
-			then_bl, else_bl = else_bl, then_bl
+			then_bl = self.then_block
+			else_bl = self.else_block
 
-		condition_block.assign_jz(then_bl.first_block)
-		condition_block.assign_next(else_bl.first_block)
+			negate = isinstance(self.condition, CompareNe)
+			if negate:
+				then_bl, else_bl = else_bl, then_bl
 
-		self.block = hrmi.IfThenElseBlock(condition_block, self.then_block.last_block, self.else_block.last_block)
+			condition_block.assign_jz(then_bl.first_block)
+			condition_block.assign_next(else_bl.first_block)
+
+			self.block = hrmi.IfThenElseBlock(condition_block, self.then_block.last_block, self.else_block.last_block)
+
+		else:
+			raise HCInternalError("Unable to generate code for if statement with non-comparison condition", self.condition)
 
 	def get_namespace(self):
 		ns = self.condition.get_namespace()
@@ -474,6 +484,19 @@ class Number(AbstractExpr):
 def is_zero(expr):
 	return isinstance(expr, Number) and expr.value == 0
 
+# Boolean value.
+# Currently not directly producable by the source code
+class Boolean(AbstractExpr):
+	__slots__ = ["value"]
+
+	def __init__(self, value):
+		self.value = value
+
+	def __repr__(self):
+		return ("Boolean("
+			+ repr(self.value) + ")")
+
+
 class Input(AbstractExpr):
 	def add_to_block(self, block):
 		block.add_instruction(hrmi.Input())
@@ -570,7 +593,15 @@ class Add(AbstractBinaryOperator):
 			+ repr(self.right) + ")")
 
 class AbstractEqualityOperator(AbstractBinaryOperator):
+	negate = False
+
 	def validate_branchable(self, namespace):
+		if isinstance(self.left, Number) and isinstance(self.right, Number):
+			value = self.left.value == self.right.value
+			if self.negate:
+				value = not value
+			return (Boolean(value), None)
+
 		self.left, injected_stmts = validate_expr(self.left, namespace)
 		self.right, injected_stmts = validate_expr(self.right, namespace)
 
@@ -595,7 +626,7 @@ class CompareEq(AbstractEqualityOperator):
 	pass
 
 class CompareNe(AbstractEqualityOperator):
-	pass
+	negate = True
 
 # Collection of names used in a part or whole of the program
 class Namespace:
