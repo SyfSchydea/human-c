@@ -547,20 +547,16 @@ class Add(AbstractBinaryOperator):
 		injected_stmts = []
 
 		while True:
-			# Recurse on left side
-			new_left, left_injected = self.left.validate(namespace)
-			if isinstance(new_left, AbstractExpr):
-				self.left = new_left
-			elif new_left is not None:
-				raise HCInternalError("Unexpected expression replacement type", new_left)
+			# Recurse on both operands
+			self.left, left_injected = validate_expr(self.left, namespace)
+			injected_stmts.extend(left_injected)
 
-			if isinstance(left_injected, AbstractLine):
-				injected_stmts.append(left_injected)
-			elif (isinstance(left_injected, list)
-					and all(isinstance(s, AbstractLine) for s in left_injected)):
-				injected_stmts.extend(left_injected)
-			elif left_injected is not None:
-				raise HCInternalError("Unexpected injected statements type", left_injected)
+			self.right, right_injected = validate_expr(self.right, namespace)
+			injected_stmts.extend(right_injected)
+
+			# Handle constant values
+			if isinstance(self.left, Number) and isinstance(self.right, Number):
+				return (Number(self.left.value + self.right.value), injected_stmts)
 
 			if isinstance(self.right, VariableRef):
 				break
@@ -596,16 +592,15 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 	negate = False
 
 	def validate_branchable(self, namespace):
+		self.left, injected_stmts = validate_expr(self.left, namespace)
+		self.right, injected_stmts = validate_expr(self.right, namespace)
+
 		if isinstance(self.left, Number) and isinstance(self.right, Number):
 			value = self.left.value == self.right.value
 			if self.negate:
 				value = not value
 			return (Boolean(value), None)
-
-		self.left, injected_stmts = validate_expr(self.left, namespace)
-		self.right, injected_stmts = validate_expr(self.right, namespace)
-
-		if is_zero(self.right):
+		elif is_zero(self.right):
 			return (None, injected_stmts)
 		elif is_zero(self.left):
 			self.left, self.right = self.right, self.left
