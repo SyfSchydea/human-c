@@ -622,6 +622,12 @@ class Multiply(AbstractBinaryOperator):
 			self.left,  self.right  = self.right,  self.left
 			left_const, right_const = right_const, left_const
 
+		if right_const and self.right.value == 0:
+			if self.left.has_side_effects():
+				injected_stmts.append(ExprLine(self.left))
+
+			return (Number(0), injected_stmts)
+
 		if right_const and self.right.value > 0:
 			# Store left in variable if it has side-effects
 			if self.left.has_side_effects() and self.right.value > 1:
