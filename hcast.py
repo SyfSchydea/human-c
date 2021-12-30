@@ -648,8 +648,10 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 	negate = False
 
 	def validate_branchable(self, namespace):
-		self.left, injected_stmts = validate_expr(self.left, namespace)
-		self.right, injected_stmts = validate_expr(self.right, namespace)
+		self.left,  injected_stmts    = validate_expr(self.left,  namespace)
+		self.right, injected_stmts_rt = validate_expr(self.right, namespace)
+
+		injected_stmts.extend(injected_stmts_rt)
 
 		if isinstance(self.left, Number) and isinstance(self.right, Number):
 			value = self.left.value == self.right.value
