@@ -57,7 +57,7 @@ t_AT         = r"@"
 t_ADD        = r"\+"
 
 def t_error(t):
-	raise TypeError(f"Unknown text {t.value}")
+	raise TypeError(f"Unknown text on line {t.lineno}: {repr(t.value)}")
 
 def main():
 	import sys
