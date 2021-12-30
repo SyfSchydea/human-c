@@ -40,7 +40,7 @@ def extract_blocks(stmt_list):
 # hands will be at each stage in the code.
 def optimise_hands_tracking(blocks):
 	# First, ensure all hands_at_start values are accurate
-	blocks[0].update_hands(hrmi.EmptyHands())
+	blocks[0].update_hands(hrmi.HandsState([hrmi.EmptyHands()]))
 	blocks_to_check = [blocks[0]]
 
 	while len(blocks_to_check) > 0:
@@ -48,15 +48,16 @@ def optimise_hands_tracking(blocks):
 		if blk.hand_data_propagated:
 			continue
 
-		hands = blk.hands_at_start
+		hands = blk.hands_at_start.clone()
 		for instr in blk.instructions:
-			hands = instr.simulate_hands(hands)
+			instr.simulate_hands(hands)
 
 		# Propagate through both possible paths of the conditional jump
 		if blk.conditional is not None:
-			hands = blk.conditional.simulate_hands(hands)
+			cond_hands = hands.clone()
+			blk.conditional.simulate_hands(cond_hands)
 			cond_block = blk.conditional.dest
-			cond_block.update_hands(hands)
+			cond_block.update_hands(cond_hands)
 			blocks_to_check.append(cond_block)
 
 		# Propagate through the unconditional
@@ -69,7 +70,7 @@ def optimise_hands_tracking(blocks):
 
 	# Make optimisations based on calculated hand data
 	for blk in blocks:
-		hands = blk.hands_at_start
+		hands = blk.hands_at_start.clone()
 
 		i = 0
 		while i < len(blk.instructions):
@@ -78,7 +79,7 @@ def optimise_hands_tracking(blocks):
 			if instr.hands_redundant(hands):
 				del blk.instructions[i]
 			else:
-				hands = instr.simulate_hands(hands)
+				instr.simulate_hands(hands)
 				i += 1
 
 def memory_map_contains(memory_map, var_name):
