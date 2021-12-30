@@ -534,6 +534,11 @@ class AbstractBinaryOperator(AbstractExpr):
 		ns_l.merge(ns_r)
 		return ns_l
 
+	def __repr__(self):
+		return (type(self).__name__ + "("
+			+ repr(self.left) + ", "
+			+ repr(self.right) + ")")
+
 class Add(AbstractBinaryOperator):
 	def add_to_block(self, block):
 		self.left.add_to_block(block)
@@ -583,10 +588,8 @@ class Add(AbstractBinaryOperator):
 
 		return (None, injected_stmts)
 
-	def __repr__(self):
-		return ("Add("
-			+ repr(self.left) + ", "
-			+ repr(self.right) + ")")
+class Multiply(AbstractBinaryOperator):
+	pass
 
 class AbstractEqualityOperator(AbstractBinaryOperator):
 	negate = False
@@ -607,15 +610,6 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 			return (None, injected_stmts)
 		else:
 			raise HCInternalError("Cannot make comparison branchable", self)
-
-		# TODO: Check if swapping operands will solve the problem
-			# ie. left is 0, right is validated expr
-		# TODO: Check for constants on both sides
-
-	def __repr__(self):
-		return (type(self).__name__ + "("
-			+ repr(self.left) + ", "
-			+ repr(self.right) + ")")
 
 class CompareEq(AbstractEqualityOperator):
 	pass
