@@ -72,6 +72,7 @@ class Output(HRMInstruction):
 	def __repr__(self):
 		return "hrmi.Output()"
 
+# Represents an instruction which takes a parameter of a location in memory
 class AbstractParameterisedInstruction(HRMInstruction):
 	__slots__ = ["loc"]
 
@@ -125,6 +126,26 @@ class Add(AbstractParameterisedInstruction):
 
 	def __repr__(self):
 		return f"hrmi.Add({repr(self.loc)})"
+
+# Instruction which represents an action in the code which could not be
+# expanded into correct code at the initial code generation stage.
+# Pseudo instructions may be able to be expanded into correct code
+# situationally later during static analysis.
+class PseudoInstruction(HRMInstruction):
+	def to_asm(self):
+		raise HRMIInternalError("Pseudo instructions may not be converted directly to assembler")
+
+# Loads a constant value into the hands.
+class LoadConstant(PseudoInstruction):
+	__slots__ = ["value"]
+
+	def __init__(self, value):
+		super().__init__()
+		self.value = value
+
+	def simulate_hands(self, hands_before):
+		# TODO: Return that the specific value will be in hand
+		return UnknownHands()
 
 # Block of instructions
 # A block consists of

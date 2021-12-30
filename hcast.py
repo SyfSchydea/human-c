@@ -467,7 +467,7 @@ class Number(AbstractExpr):
 		self.value = value
 
 	def add_to_block(self, block):
-		raise HCTypeError("Cannot conjure arbitrary numbers")
+		block.add_instruction(hrmi.LoadConstant(self.value))
 
 	def validate(self, namespace):
 		return (None, None)
