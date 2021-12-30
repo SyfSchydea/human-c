@@ -89,15 +89,11 @@ def memory_map_contains(memory_map, var_name):
 	
 	return False
 
-# Optimise code by tracking where variables are actually
-# used, and when their value is last set.
-# Any instances of a variable's value being set when
-# it isn't going to be used again may be removed.
-def optimise_variable_needs(blocks, memory_map):
-	# Find each time a variable is referenced, and work backwards
-	# to each place in the code that that variable could be getting
-	# its value from, marking that in every instruction inbetween,
-	# that variable is in use.
+# Find each time a variable is referenced, and work backwards
+# to each place in the code that that variable could be getting
+# its value from, marking that in every instruction inbetween,
+# that variable is in use.
+def record_variable_use(blocks, memory_map):
 	for blk in blocks:
 		for i in range(len(blk.instructions)):
 			instr = blk.instructions[i]
@@ -108,7 +104,11 @@ def optimise_variable_needs(blocks, memory_map):
 			blk.back_propagate_variable_use(i, instr.loc,
 					memory_map_contains(memory_map, instr.loc))
 
-	# Iterate through each instruction in the program again.
+# Optimise code by tracking where variables are actually
+# used, and when their value is last set.
+# Any instances of a variable's value being set when
+# it isn't going to be used again may be removed.
+def optimise_variable_needs(blocks, memory_map):
 	for blk in blocks:
 		i = 0
 		while i < len(blk.instructions):
@@ -118,6 +118,72 @@ def optimise_variable_needs(blocks, memory_map):
 				del blk.instructions[i]
 			else:
 				i += 1
+
+def rename_variable(blocks, old_name, new_name):
+	for block in blocks:
+		for instr in block.instructions:
+			if not isinstance(instr, hrmi.AbstractParameterisedInstruction):
+				continue
+			if instr.loc == old_name:
+				instr.loc = new_name
+
+# Merge variables which are never required to hold
+# their values simoultaneously.
+# Variables which may be merged in this way
+# will be renamed to share the same name.
+# Relies on variable use data being stored by record_variable_use first.
+def merge_disjoint_variables(blocks, namespace, memory_map):
+	# Create 2d array to track which pairs of variables
+	# are used simoultaneously
+	# (Using the term "array" very loosely here)
+	variables_mergable = {
+		v: {
+			v: True for v in namespace.names
+		} for v in namespace.names
+	}
+
+	# Iterate through each instruction in the whole program
+	for block in blocks:
+		for instr in block.instructions:
+			# Check if two or more variables are used during this instruction
+			vars_used = list(instr.variables_used)
+			for i in range(len(vars_used)):
+				var1 = vars_used[i]
+				for j in range(i + 1, len(vars_used)):
+					var2 = vars_used[j]
+
+					# If so, mark the variables as unmergable in the array
+					variables_mergable[var1][var2] = False
+					variables_mergable[var2][var1] = False
+
+	# Look through the array for any mergable pairs of variables
+	for var1, row in variables_mergable.items():
+		if memory_map_contains(memory_map, var1):
+			continue
+
+		for var2, mergable in row.items():
+			if var1 == var2 or not mergable:
+				continue
+
+			print("Able to merge", var1, "and", var2)
+
+			# Rename instances of the first to match the second
+			rename_variable(blocks, var1, var2)
+
+			# Update the table to reflect the change
+			for var3 in namespace.names:
+				# Any variables which var1 couldn't merge
+				# with, var2 now can't merge with either.
+				if not variables_mergable[var1][var3]:
+					variables_mergable[var2][var3] = False
+					variables_mergable[var3][var2] = False
+
+				# var1 can no longer merge with anything,
+				# because it doesn't exist anymore
+				variables_mergable[var1][var3] = False
+				variables_mergable[var3][var1] = False
+
+			variables_mergable[var2][var1] = False
 
 # Removes blocks which are simply a trivial redirect to another block
 def collapse_redundant_blocks(blocks):
@@ -219,12 +285,14 @@ def main():
 	if end_block in blocks:
 		blocks.remove(end_block)
 		blocks.append(end_block)
-	
+
 	optimise_hands_tracking(blocks)
+	record_variable_use(blocks, initial_memory_map)
 	optimise_variable_needs(blocks, initial_memory_map)
 
 	collapse_redundant_blocks(blocks)
 
+	merge_disjoint_variables(blocks, namespace, initial_memory_map)
 	assign_memory(blocks, initial_memory_map)
 
 	mark_implicit_jumps(blocks)
