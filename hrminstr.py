@@ -236,7 +236,8 @@ class Block:
 	# If propagation reaches the start of the block, it will continue into
 	# recursive calls into the jumps_in blocks which lead to this block.
 	# Pass instr_idx < 0 to propagate starting at the end of the block.
-	def back_propagate_variable_use(self, instr_idx, var_name):
+	def back_propagate_variable_use(self, instr_idx, var_name,
+				is_pre_initialised):
 		if instr_idx < 0:
 			instr_idx = len(self.instructions) - 1
 
@@ -256,14 +257,15 @@ class Block:
 
 		# If propagation reaches all the way back to the starting block,
 		# then the variable may be read before it is written to.
-		if len(self.jumps_in) == 0:
-			raise HRMIInternalError(f"Variable '{var_name}' may"
+		if len(self.jumps_in) == 0 and not is_pre_initialised:
+			raise HRMIInternalError(f"Variable '{var_name}' may "
 					+ "be referenced before assignment")
 
 		# Propagation has not stopped by the start of this
 		# block, so propagate into the next blocks
 		for jmp in self.jumps_in:
-			jmp.src.back_propagate_variable_use(-1, var_name)
+			jmp.src.back_propagate_variable_use(-1, var_name,
+					is_pre_initialised)
 
 	def __repr__(self):
 		return ("Block("

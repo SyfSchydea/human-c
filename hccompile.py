@@ -81,11 +81,18 @@ def optimise_hands_tracking(blocks):
 				hands = instr.simulate_hands(hands)
 				i += 1
 
+def memory_map_contains(memory_map, var_name):
+	for memloc in memory_map:
+		if memloc.name == var_name:
+			return True
+	
+	return False
+
 # Optimise code by tracking where variables are actually
 # used, and when their value is last set.
 # Any instances of a variable's value being set when
 # it isn't going to be used again may be removed.
-def optimise_variable_needs(blocks):
+def optimise_variable_needs(blocks, memory_map):
 	# Find each time a variable is referenced, and work backwards
 	# to each place in the code that that variable could be getting
 	# its value from, marking that in every instruction inbetween,
@@ -97,7 +104,8 @@ def optimise_variable_needs(blocks):
 			if not instr.reads_variable:
 				continue
 
-			blk.back_propagate_variable_use(i, instr.loc)
+			blk.back_propagate_variable_use(i, instr.loc,
+					memory_map_contains(memory_map, instr.loc))
 
 	# Iterate through each instruction in the program again.
 	for blk in blocks:
@@ -212,7 +220,7 @@ def main():
 		blocks.append(end_block)
 	
 	optimise_hands_tracking(blocks)
-	optimise_variable_needs(blocks)
+	optimise_variable_needs(blocks, initial_memory_map)
 
 	collapse_redundant_blocks(blocks)
 

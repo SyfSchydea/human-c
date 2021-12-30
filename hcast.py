@@ -170,6 +170,7 @@ class StatementList:
 		self.last_block = self.stmts[-1].block
 
 	# Look up memory locations of variables specified by the program
+	# Returns as an iterable of MemoryLocation objects
 	def get_memory_map(self):
 		memory_by_name = {}
 		memory_by_loc = {}
