@@ -594,6 +594,50 @@ class Add(AbstractBinaryOperator):
 
 		return (None, injected_stmts)
 
+_primes = [2]
+
+def get_primes():
+	for p in _primes:
+		yield p
+
+	i = _primes[-1]
+	while True:
+		i += 1
+		is_prime = True
+
+		for p in _primes:
+			quot, rem = divmod(i, p)
+
+			if rem == 0:
+				is_prime = False
+				break
+
+			if quot < p:
+				break
+
+		if is_prime:
+			_primes.append(i)
+			yield i
+
+def prime_factors(n):
+	factors = []
+
+	primes = get_primes()
+	p = next(primes)
+	while n != 1:
+		quot, rem = divmod(n, p)
+
+		if rem == 0:
+			factors.append(p)
+			n = quot
+		elif quot < p:
+			factors.append(n)
+			break
+		else:
+			p = next(primes)
+
+	return factors
+
 # Nest repeated addition nodes
 def nest_addition(expr, n):
 	if n < 1:
@@ -603,6 +647,46 @@ def nest_addition(expr, n):
 		return expr
 
 	return Add(nest_addition(expr, n - 1), expr)
+
+# Find an efficient way to multiply an expression by a constant using only addition.
+# Returns (a new expression node, and a list of injected statements)
+def validate_expr_mul_const(expr, n, namespace):
+	injected_stmts = []
+
+	if expr.has_side_effects() and n > 1:
+		var_name = namespace.get_unique_name()
+		new_assign = ExprLine(Assignment(var_name, expr))
+		injected_stmts.append(new_assign)
+		expr = VariableRef(var_name)
+
+	if n <= 5:
+		nested_add = nest_addition(expr, n)
+		nested_add, injected_nested = validate_expr(nested_add, namespace)
+		injected_stmts.extend(injected_nested)
+
+		return (nested_add, injected_stmts)
+
+	factors = prime_factors(n)
+	factors.sort(reverse=True)
+
+	product_expr = expr
+	product_name = namespace.get_unique_name()
+
+	# For each factor except the last
+	for fact in factors[0:-1]:
+		# Multiply by this prime factor by repeated addition
+		nested_add = nest_addition(product_expr, fact)
+		nested_add, injected_nested = validate_expr(nested_add, namespace)
+		injected_stmts.extend(injected_nested)
+
+		injected_stmts.append(ExprLine(Assignment(product_name, nested_add)))
+		product_expr = VariableRef(product_name)
+
+	nested_add = nest_addition(product_expr, factors[-1])
+	nested_add, injected_nested = validate_expr(nested_add, namespace)
+	injected_stmts.extend(injected_nested)
+
+	return (nested_add, injected_stmts)
 
 class Multiply(AbstractBinaryOperator):
 	def validate(self, namespace):
@@ -629,18 +713,11 @@ class Multiply(AbstractBinaryOperator):
 			return (Number(0), injected_stmts)
 
 		if right_const and self.right.value > 0:
-			# Store left in variable if it has side-effects
-			if self.left.has_side_effects() and self.right.value > 1:
-				var_name = namespace.get_unique_name()
-				new_assign = ExprLine(Assignment(var_name, self.left))
-				injected_stmts.append(new_assign)
-				self.left = VariableRef(var_name)
+			expr, injected_stmts_mul = validate_expr_mul_const(
+					self.left, self.right.value, namespace)
+			injected_stmts.extend(injected_stmts_mul)
 
-			nested_add = nest_addition(self.left, self.right.value)
-			nested_add, injected_nested = validate_expr(nested_add, namespace)
-			injected_stmts.extend(injected_nested)
-
-			return (nested_add, injected_stmts)
+			return (expr, injected_stmts)
 
 		raise HCTypeError("Unable to multiply", self.left, "with", self.right)
 
