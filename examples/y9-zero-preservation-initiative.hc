@@ -4,6 +4,5 @@
 // OUTBOX.
 
 forever
-	x = input
-	if x == 0
-		output x
+	if input == 0
+		output 0
