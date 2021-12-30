@@ -534,6 +534,11 @@ class AbstractBinaryOperator(AbstractExpr):
 		ns_l.merge(ns_r)
 		return ns_l
 
+	def __repr__(self):
+		return (type(self).__name__ + "("
+			+ repr(self.left) + ", "
+			+ repr(self.right) + ")")
+
 class Add(AbstractBinaryOperator):
 	def add_to_block(self, block):
 		self.left.add_to_block(block)
@@ -583,10 +588,49 @@ class Add(AbstractBinaryOperator):
 
 		return (None, injected_stmts)
 
-	def __repr__(self):
-		return ("Add("
-			+ repr(self.left) + ", "
-			+ repr(self.right) + ")")
+# Nest repeated addition nodes
+def nest_addition(expr, n):
+	if n < 1:
+		raise HCInternalError("Unable to nest 0 instances of expression")
+
+	if n == 1:
+		return expr
+
+	return Add(nest_addition(expr, n - 1), expr)
+
+class Multiply(AbstractBinaryOperator):
+	def validate(self, namespace):
+		self.left,  injected_stmts       = validate_expr(self.left,  namespace)
+		self.right, injected_stmts_right = validate_expr(self.right, namespace)
+
+		injected_stmts.extend(injected_stmts_right)
+
+		left_const  = isinstance(self.left,  Number)
+		right_const = isinstance(self.right, Number)
+
+		if left_const and right_const:
+			return (Number(self.left.value * self.right.value), None)
+
+		# Ensure any constant term is on the right
+		if left_const:
+			self.left,  self.right  = self.right,  self.left
+			left_const, right_const = right_const, left_const
+
+		if right_const and self.right.value > 0:
+			# Store left in variable if it has side-effects
+			if self.left.has_side_effects() and self.right.value > 1:
+				var_name = namespace.get_unique_name()
+				new_assign = ExprLine(Assignment(var_name, self.left))
+				injected_stmts.append(new_assign)
+				self.left = VariableRef(var_name)
+
+			nested_add = nest_addition(self.left, self.right.value)
+			nested_add, injected_nested = validate_expr(nested_add, namespace)
+			injected_stmts.extend(injected_nested)
+
+			return (nested_add, injected_stmts)
+
+		raise HCTypeError("Unable to multiply", self.left, "with", self.right)
 
 class AbstractEqualityOperator(AbstractBinaryOperator):
 	negate = False
@@ -607,15 +651,6 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 			return (None, injected_stmts)
 		else:
 			raise HCInternalError("Cannot make comparison branchable", self)
-
-		# TODO: Check if swapping operands will solve the problem
-			# ie. left is 0, right is validated expr
-		# TODO: Check for constants on both sides
-
-	def __repr__(self):
-		return (type(self).__name__ + "("
-			+ repr(self.left) + ", "
-			+ repr(self.right) + ")")
 
 class CompareEq(AbstractEqualityOperator):
 	pass

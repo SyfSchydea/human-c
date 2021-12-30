@@ -23,6 +23,7 @@ tokens = (
 	"NOT_EQUALS",
 	"AT",
 	"ADD",
+	"MULTIPLY",
 )
 
 def t_NL(t):
@@ -55,6 +56,7 @@ t_DBL_EQUALS = r"=="
 t_NOT_EQUALS = r"!="
 t_AT         = r"@"
 t_ADD        = r"\+"
+t_MULTIPLY   = r"\*"
 
 def t_error(t):
 	raise TypeError(f"Unknown text on line {t.lineno}: {repr(t.value)}")

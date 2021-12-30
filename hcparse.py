@@ -79,6 +79,10 @@ def p_operator_add(p):
 	"add : ADD optws"
 	pass
 
+def p_operator_multiply(p):
+	"multiply : MULTIPLY optws"
+	pass
+
 def p_operator_eq(p):
 	"cmp_eq : DBL_EQUALS optws"
 	pass
@@ -143,13 +147,21 @@ def p_expr_s(p):
 	"expr : expr_s"
 	p[0] = p[1]
 
-def p_expr_v(p):
-	"expr_s : expr_v"
+def p_expr_m(p):
+	"expr_s : expr_m"
 	p[0] = p[1]
 
 def p_add(p):
-	"expr_s : expr_s add expr_v"
+	"expr_s : expr_s add expr_m"
 	p[0] = ast.Add(p[1], p[3])
+
+def p_expr_v(p):
+	"expr_m : expr_v"
+	p[0] = p[1]
+
+def p_mul(p):
+	"expr_m : expr_m multiply expr_v"
+	p[0] = ast.Multiply(p[1], p[3])
 
 def p_input(p):
 	"expr_v : input"
@@ -164,9 +176,10 @@ def p_var(p):
 	p[0] = ast.VariableRef(p[1])
 
 precedence = (
-	("left", "DBL_EQUALS", "NOT_EQUALS"),
+	("left",  "DBL_EQUALS", "NOT_EQUALS"),
 	("right", "EQUALS"),
 	("left",  "ADD"),
+	("left",  "MULTIPLY"),
 )
 
 def p_error(p):
