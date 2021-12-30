@@ -2,6 +2,27 @@ class HRMIInternalError(Exception):
 	pass
 
 class HRMInstruction:
+	# Should be overridden to True for instructions which
+	# require a variable to be set to a value
+	reads_variable = False
+
+	# Should be overridden to True for instructions which set
+	# the value of the variable in their .loc property.
+	# Note that this should not be True for variables which modify
+	# the value, but still rely on a value already being set.
+	writes_variable = False
+
+	__slots__ = [
+		# Set of variables used during this instruction.
+		# These variables are not necessarily used directly by this
+		# instruction, but their values must be held during the execution
+		# of this instruction.
+		"variables_used",
+	]
+
+	def __init__(self):
+		self.variables_used = set()
+
 	def to_asm(self):
 		raise NotImplementedError("HRMInstruction.to_asm", self)
 
@@ -14,6 +35,21 @@ class HRMInstruction:
 	# by the calculated hands state.
 	# This is false in the majority of cases
 	def hands_redundant(self, hands_before):
+		return False
+
+	def mark_variable_used(self, name):
+		self.variables_used.add(name)
+
+	# Returns true if the instruction requires the given
+	# variable to hold a value during execution
+	def needs_variable(self, name):
+		return name in self.variables_used
+
+	# Should return true if this instruction is used to set
+	# a variable to a value, but that value will not be used,
+	# rendering the instruction redundant.
+	# False for most instructions.
+	def var_redundant(self):
 		return False
 
 class Input(HRMInstruction):
@@ -40,9 +76,12 @@ class AbstractParameterisedInstruction(HRMInstruction):
 	__slots__ = ["loc"]
 
 	def __init__(self, loc):
+		super().__init__()
 		self.loc = loc
 
 class Save(AbstractParameterisedInstruction):
+	writes_variable = True
+
 	def to_asm(self):
 		return "COPYTO " + str(self.loc)
 
@@ -52,10 +91,17 @@ class Save(AbstractParameterisedInstruction):
 	def hands_redundant(self, hands_before):
 		return hands_before == VariableInHands(self.loc)
 
+	# This save instruction may be redundant if its
+	# variable will not have its value used again.
+	def var_redundant(self):
+		return self.loc not in self.variables_used
+
 	def __repr__(self):
 		return f"hrmi.Save({repr(self.loc)})"
 
 class Load(AbstractParameterisedInstruction):
+	reads_variable = True
+
 	def to_asm(self):
 		return "COPYFROM " + str(self.loc)
 
@@ -69,6 +115,8 @@ class Load(AbstractParameterisedInstruction):
 		return f"hrmi.Load({repr(self.loc)})"
 
 class Add(AbstractParameterisedInstruction):
+	reads_variable = True
+
 	def to_asm(self):
 		return "ADD " + str(self.loc)
 
@@ -181,6 +229,43 @@ class Block:
 		if worst_hands != self.hands_at_start:
 			self.hands_at_start = new_hands
 			self.hand_data_propagated = False
+
+	# Mark instructions as using the given variable names
+	# Propagation works backwards until it finds an instruction
+	# which sets the value of this variable.
+	# If propagation reaches the start of the block, it will continue into
+	# recursive calls into the jumps_in blocks which lead to this block.
+	# Pass instr_idx < 0 to propagate starting at the end of the block.
+	def back_propagate_variable_use(self, instr_idx, var_name,
+				is_pre_initialised):
+		if instr_idx < 0:
+			instr_idx = len(self.instructions) - 1
+
+		for i in range(instr_idx, -1, -1):
+			instr = self.instructions[i]
+
+			# Stop propagation if we already know that
+			# the instruction uses the variable.
+			if instr.needs_variable(var_name):
+				return
+
+			instr.mark_variable_used(var_name)
+
+			# Stop propagation if this instruction sets the variable.
+			if instr.writes_variable and instr.loc == var_name:
+				return
+
+		# If propagation reaches all the way back to the starting block,
+		# then the variable may be read before it is written to.
+		if len(self.jumps_in) == 0 and not is_pre_initialised:
+			raise HRMIInternalError(f"Variable '{var_name}' may "
+					+ "be referenced before assignment")
+
+		# Propagation has not stopped by the start of this
+		# block, so propagate into the next blocks
+		for jmp in self.jumps_in:
+			jmp.src.back_propagate_variable_use(-1, var_name,
+					is_pre_initialised)
 
 	def __repr__(self):
 		return ("Block("
