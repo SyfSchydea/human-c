@@ -1,4 +1,4 @@
-*.sw[ponm]
+*.sw[ponml]
 parser.out
 parsetab.py
 __pycache__
