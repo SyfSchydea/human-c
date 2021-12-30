@@ -620,6 +620,9 @@ def get_primes():
 			yield i
 
 def prime_factors(n):
+	if n == 1:
+		return [1]
+
 	factors = []
 
 	primes = get_primes()
@@ -638,10 +641,31 @@ def prime_factors(n):
 
 	return factors
 
+# Find the best strategy for multiplying by addition.
+# Returns (a list of prime factors, and number to add at the end)
+def find_multiplication_strategy(n):
+	best_score = float("inf")
+	best_strategy = None
+
+	i = 0
+	while i < best_score:
+		product = n - i
+		factors = prime_factors(product)
+
+		score = sum(factors) + i
+
+		if score < best_score:
+			best_strategy = (factors, i)
+			best_score = score
+
+		i += 1
+
+	return best_strategy
+
 # Nest repeated addition nodes
 def nest_addition(expr, n):
-	if n < 1:
-		raise HCInternalError("Unable to nest 0 instances of expression")
+	if n == 0:
+		return Number(0)
 
 	if n == 1:
 		return expr
@@ -659,14 +683,7 @@ def validate_expr_mul_const(expr, n, namespace):
 		injected_stmts.append(new_assign)
 		expr = VariableRef(var_name)
 
-	if n <= 5:
-		nested_add = nest_addition(expr, n)
-		nested_add, injected_nested = validate_expr(nested_add, namespace)
-		injected_stmts.extend(injected_nested)
-
-		return (nested_add, injected_stmts)
-
-	factors = prime_factors(n)
+	factors, offset = find_multiplication_strategy(n)
 	factors.sort(reverse=True)
 
 	product_expr = expr
@@ -683,6 +700,7 @@ def validate_expr_mul_const(expr, n, namespace):
 		product_expr = VariableRef(product_name)
 
 	nested_add = nest_addition(product_expr, factors[-1])
+	nested_add = Add(nested_add, nest_addition(expr, offset))
 	nested_add, injected_nested = validate_expr(nested_add, namespace)
 	injected_stmts.extend(injected_nested)
 
