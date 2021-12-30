@@ -564,6 +564,12 @@ class Add(AbstractBinaryOperator):
 			if isinstance(self.left, Number) and isinstance(self.right, Number):
 				return (Number(self.left.value + self.right.value), injected_stmts)
 
+			if is_zero(self.left):
+				return (self.right, injected_stmts)
+
+			if is_zero(self.right):
+				return (self.left, injected_stmts)
+
 			if isinstance(self.right, VariableRef):
 				break
 
