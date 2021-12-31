@@ -1,4 +1,5 @@
 import string
+import math
 from dataclasses import dataclass
 
 import hrminstr as hrmi
@@ -720,25 +721,75 @@ def prime_factors(n):
 
 	return factors
 
+# Holds a strategy for multiplying up to a large number.
+# Consists of a series of multiplications (factors),
+# then a small addition (offset).
+class MultiplicationStrategy:
+	__slots__ = [
+		"factors",
+		"offset",
+
+		# Value this strategy will multiply up to
+		"value",
+
+		# Estimated number of instructions taken
+		# to perform this multiplication.
+		"instructions",
+	]
+
+	def __init__(self, factors, offset):
+		self.factors = sorted(factors, reverse=True)
+		self.offset = offset
+
+		self.value = math.prod(factors) + offset
+
+		for i in range(len(self.factors)):
+			f = self.factors[i]
+			if f > 5 and f < self.value:
+				self.factors[i] = find_multiplication_strategy(f)
+
+		self.instructions = self.offset
+		for f in self.factors:
+			if isinstance(f, MultiplicationStrategy):
+				self.instructions += f.instructions
+			else:
+				self.instructions += f
+
+	def __str__(self):
+		return (" * ".join(f"({f})" if isinstance(f, MultiplicationStrategy)
+					else str(f) for f in self.factors)
+				+ (" + " + str(self.offset) if self.offset != 0 else ""))
+
+# Lookup table for memoising multiplication stategies
+_multiplication_stategies = {}
+
 # Find the best strategy for multiplying by addition.
 # Returns (a list of prime factors, and number to add at the end)
+# Any value in the prime factors could be replaced
+# with another tuple of a similar form.
 def find_multiplication_strategy(n):
-	best_score = float("inf")
+	if n in _multiplication_stategies:
+		return _multiplication_stategies[n]
+
 	best_strategy = None
 
 	i = 0
-	while i < best_score:
+	while best_strategy is None or i < best_strategy.instructions:
 		product = n - i
 		factors = prime_factors(product)
+		# print("Finding strategy for", product, "as product of", factors)
 
-		score = sum(factors) + i
+		strategy = MultiplicationStrategy(factors, i)
+		# print("Able to reach", product, "in", strategy.instructions, "instructions")
 
-		if score < best_score:
-			best_strategy = (factors, i)
-			best_score = score
+		if (best_strategy is None
+				or strategy.instructions < best_strategy.instructions):
+			best_strategy = strategy
 
 		i += 1
 
+	# print("Optimal strategy for", n, "is", best_strategy, "(", best_strategy.instructions, "steps)")
+	_multiplication_stategies[n] = best_strategy
 	return best_strategy
 
 # Nest repeated addition nodes
