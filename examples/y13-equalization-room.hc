@@ -8,6 +8,5 @@
 
 forever
 	x = input
-	y = input
-	if x == y
+	if input == x
 		output x

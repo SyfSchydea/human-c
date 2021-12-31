@@ -897,7 +897,12 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 			self.left, self.right = self.right, self.left
 			return (None, injected_stmts)
 		else:
-			raise HCInternalError("Cannot make comparison branchable", self)
+			# (x == y) -> (x - y == 0)
+			self.left, injected_left = validate_expr(Subtract(self.left, self.right), namespace)
+			injected_stmts.extend(injected_left)
+			self.right = Number(0)
+
+			return (None, injected_stmts)
 
 class CompareEq(AbstractEqualityOperator):
 	pass
