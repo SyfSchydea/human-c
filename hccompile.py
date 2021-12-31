@@ -165,8 +165,6 @@ def merge_disjoint_variables(blocks, namespace, memory_map):
 			if var1 == var2 or not mergable:
 				continue
 
-			print("Able to merge", var1, "and", var2)
-
 			# Rename instances of the first to match the second
 			rename_variable(blocks, var1, var2)
 
