@@ -664,12 +664,12 @@ class Subtract(AbstractBinaryOperator):
 			if self.left.has_side_effects() and self.right.has_side_effects():
 				left_name = namespace.get_unique_name()
 				left_assign = ExprLine(Assignment(left_name, self.left))
-				injected_stmts.append(new_assign)
+				injected_stmts.append(left_assign)
 				self.left = VariableRef(left_name)
 
 			right_name = namespace.get_unique_name()
 			right_assign = ExprLine(Assignment(right_name, self.right))
-			injected_stmts.append(new_assign)
+			injected_stmts.append(right_assign)
 			self.right = VariableRef(right_name)
 
 		return (None, injected_stmts)
