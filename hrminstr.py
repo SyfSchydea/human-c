@@ -129,6 +129,18 @@ class Add(AbstractParameterisedInstruction):
 	def __repr__(self):
 		return f"hrmi.Add({repr(self.loc)})"
 
+class Subtract(AbstractParameterisedInstruction):
+	reads_variable = True
+
+	def to_asm(self):
+		return "SUB " + str(self.loc)
+
+	def simulate_hands(self, hands):
+		hands.clear_constraints()
+
+	def __repr__(self):
+		return f"hrmi.Subtract({repr(self.loc)})"
+
 # Instruction which represents an action in the code which could not be
 # expanded into correct code at the initial code generation stage.
 # Pseudo instructions may be able to be expanded into correct code

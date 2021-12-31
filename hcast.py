@@ -545,9 +545,9 @@ class Add(AbstractBinaryOperator):
 
 		if isinstance(self.right, VariableRef):
 			block.add_instruction(hrmi.Add(self.right.name))
-
 		else:
-			raise HCInternalError("Unable to directly add right operand", self.right)
+			raise HCInternalError("Unable to directly add right operand",
+					self.right)
 
 	def validate(self, namespace):
 		injected_stmts = []
@@ -573,9 +573,11 @@ class Add(AbstractBinaryOperator):
 			if isinstance(self.right, VariableRef):
 				break
 
-			# If the right hand side is an add node, rotate to put the child add on the left
+			# If the right hand side is an add node, rotate
+			# to put the child add on the left
 			# Relies on associativity
-			elif isinstance(self.right, Add):
+			if isinstance(self.right, Add):
+				# a + (b + c) -> (a + b) + c
 				a = self.left
 				b = self.right.left
 				c = self.right.right
@@ -583,9 +585,18 @@ class Add(AbstractBinaryOperator):
 				self.right = c
 				continue
 
+			if isinstance(self.right, Subtract):
+				# a + (b - c) -> (a + b) - c
+				a = self.left
+				b = self.right.left
+				c = self.right.right
+				self.left = Subtract(Add(a, b), c)
+				self.right = Number(0)
+				continue
+
 			# Swap operands. Relies on commutativity
 			self.left, self.right = self.right, self.left
-		
+
 			if self.right.has_side_effects():
 				var_name = namespace.get_unique_name()
 				new_assign = ExprLine(Assignment(var_name, self.right))
@@ -595,7 +606,72 @@ class Add(AbstractBinaryOperator):
 		return (None, injected_stmts)
 
 class Subtract(AbstractBinaryOperator):
-	pass
+	def add_to_block(self, block):
+		self.left.add_to_block(block)
+
+		if isinstance(self.right, VariableRef):
+			block.add_instruction(hrmi.Subtract(self.right.name))
+		else:
+			raise HCInternalError("Unable to directly subtract right operand",
+					self.right)
+
+	def validate(self, namespace):
+		injected_stmts = []
+
+		while True:
+			# Recurse on both operands
+			self.left, left_injected = validate_expr(self.left, namespace)
+			injected_stmts.extend(left_injected)
+
+			self.right, right_injected = validate_expr(self.right, namespace)
+			injected_stmts.extend(right_injected)
+
+			# Handle constant values
+			if isinstance(self.left, Number) and isinstance(self.right, Number):
+				return (Number(self.left.value - self.right.value), injected_stmts)
+
+			if is_zero(self.right):
+				return (self.left, injected_stmts)
+
+			if isinstance(self.right, VariableRef):
+				break
+
+			# If the right hand side is an add node, rotate
+			# to put the child add on the left
+			# Relies on associativity
+			if isinstance(self.right, Add):
+				# a - (b + c) -> (a - b) - c
+				a = self.left
+				b = self.right.left
+				c = self.right.right
+				self.left = Subtract(a, b)
+				self.right = c
+				continue
+
+			if isinstance(self.right, Subtract):
+				# a - (b - c) -> (a - b) + c
+				a = self.left
+				b = self.right.left
+				c = self.right.right
+				self.left = Add(Subtract(a, b), c)
+				self.right = Number(0)
+				continue
+
+			# If we get here, we haven't got anything directly subtractable
+			# into the right hand side, so we need to store the value
+			# of the rhs in a new variable.
+			if self.left.has_side_effects() and self.right.has_side_effects():
+				left_name = namespace.get_unique_name()
+				left_assign = ExprLine(Assignment(left_name, self.left))
+				injected_stmts.append(new_assign)
+				self.left = VariableRef(left_name)
+
+			right_name = namespace.get_unique_name()
+			right_assign = ExprLine(Assignment(right_name, self.right))
+			injected_stmts.append(new_assign)
+			self.right = VariableRef(right_name)
+
+		return (None, injected_stmts)
 
 _primes = [2]
 
