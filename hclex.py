@@ -23,6 +23,7 @@ tokens = (
 	"NOT_EQUALS",
 	"AT",
 	"ADD",
+	"SUBTRACT",
 	"MULTIPLY",
 )
 
@@ -56,6 +57,7 @@ t_DBL_EQUALS = r"=="
 t_NOT_EQUALS = r"!="
 t_AT         = r"@"
 t_ADD        = r"\+"
+t_SUBTRACT   = r"-"
 t_MULTIPLY   = r"\*"
 
 def t_error(t):
