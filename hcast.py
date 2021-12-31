@@ -777,10 +777,8 @@ def find_multiplication_strategy(n):
 	while best_strategy is None or i < best_strategy.instructions:
 		product = n - i
 		factors = prime_factors(product)
-		# print("Finding strategy for", product, "as product of", factors)
 
 		strategy = MultiplicationStrategy(factors, i)
-		# print("Able to reach", product, "in", strategy.instructions, "instructions")
 
 		if (best_strategy is None
 				or strategy.instructions < best_strategy.instructions):
@@ -788,7 +786,6 @@ def find_multiplication_strategy(n):
 
 		i += 1
 
-	# print("Optimal strategy for", n, "is", best_strategy, "(", best_strategy.instructions, "steps)")
 	_multiplication_stategies[n] = best_strategy
 	return best_strategy
 
@@ -802,6 +799,32 @@ def nest_addition(expr, n):
 
 	return Add(nest_addition(expr, n - 1), expr)
 
+# Expand a multiplication strategy into its various additions and assignments.
+# Returns (the new expression which holds the result of the multiplication,
+# and a list of injected statements used in the calculation)
+def expand_multiplication_strategy(strategy, expr, namespace):
+	if isinstance(strategy, int):
+		return (nest_addition(expr, strategy), [])
+
+	injected_stmts = []
+	working_product = expr
+	for fact in strategy.factors:
+		working_product, fact_stmts = expand_multiplication_strategy(
+				fact, working_product, namespace)
+		injected_stmts.extend(fact_stmts)
+
+		var_name = namespace.get_unique_name()
+		injected_stmts.append(ExprLine(Assignment(var_name, working_product)))
+		working_product = VariableRef(var_name)
+
+	offset_add = nest_addition(expr, strategy.offset)
+	final_add = Add(working_product, offset_add)
+
+	final_add, injected_final = validate_expr(final_add, namespace)
+	injected_stmts.extend(injected_final)
+
+	return (final_add, injected_stmts)
+
 # Find an efficient way to multiply an expression by a constant using only addition.
 # Returns (a new expression node, and a list of injected statements)
 def validate_expr_mul_const(expr, n, namespace):
@@ -813,28 +836,13 @@ def validate_expr_mul_const(expr, n, namespace):
 		injected_stmts.append(new_assign)
 		expr = VariableRef(var_name)
 
-	factors, offset = find_multiplication_strategy(n)
-	factors.sort(reverse=True)
+	strategy = find_multiplication_strategy(n)
 
-	product_expr = expr
-	product_name = namespace.get_unique_name()
+	expanded_expr, expanded_stmts = (
+			expand_multiplication_strategy(strategy, expr, namespace))
+	injected_stmts.extend(expanded_stmts)
 
-	# For each factor except the last
-	for fact in factors[0:-1]:
-		# Multiply by this prime factor by repeated addition
-		nested_add = nest_addition(product_expr, fact)
-		nested_add, injected_nested = validate_expr(nested_add, namespace)
-		injected_stmts.extend(injected_nested)
-
-		injected_stmts.append(ExprLine(Assignment(product_name, nested_add)))
-		product_expr = VariableRef(product_name)
-
-	nested_add = nest_addition(product_expr, factors[-1])
-	nested_add = Add(nested_add, nest_addition(expr, offset))
-	nested_add, injected_nested = validate_expr(nested_add, namespace)
-	injected_stmts.extend(injected_nested)
-
-	return (nested_add, injected_stmts)
+	return (expanded_expr, injected_stmts)
 
 class Multiply(AbstractBinaryOperator):
 	def validate(self, namespace):
