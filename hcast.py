@@ -594,6 +594,9 @@ class Add(AbstractBinaryOperator):
 
 		return (None, injected_stmts)
 
+class Subtract(AbstractBinaryOperator):
+	pass
+
 _primes = [2]
 
 def get_primes():

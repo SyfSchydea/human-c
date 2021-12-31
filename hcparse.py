@@ -79,6 +79,10 @@ def p_operator_add(p):
 	"add : ADD optws"
 	pass
 
+def p_operator_subtract(p):
+	"subtract : SUBTRACT optws"
+	pass
+
 def p_operator_multiply(p):
 	"multiply : MULTIPLY optws"
 	pass
@@ -155,6 +159,10 @@ def p_add(p):
 	"expr_s : expr_s add expr_m"
 	p[0] = ast.Add(p[1], p[3])
 
+def p_sub(p):
+	"expr_s : expr_s subtract expr_m"
+	p[0] = ast.Subtract(p[1], p[3])
+
 def p_expr_v(p):
 	"expr_m : expr_v"
 	p[0] = p[1]
@@ -178,7 +186,7 @@ def p_var(p):
 precedence = (
 	("left",  "DBL_EQUALS", "NOT_EQUALS"),
 	("right", "EQUALS"),
-	("left",  "ADD"),
+	("left",  "ADD", "SUBTRACT"),
 	("left",  "MULTIPLY"),
 )
 
