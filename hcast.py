@@ -291,37 +291,39 @@ class If(AbstractLine):
 		self.then_block.create_blocks()
 		self.else_block.create_blocks()
 
-		condition_block = hrmi.Block()
+		self.block = self.condition.create_branch_block(
+				self.then_block, self.else_block)
 
-		if isinstance(self.condition, Boolean):
-			if self.condition.value:
-				code_block = self.then_block
-			else:
-				code_block = self.else_block
+		# TODO: Move all this stuff off to the various expressions they represent, then delete it from here.
+		# if isinstance(self.condition, Boolean):
+		# 	if self.condition.value:
+		# 		code_block = self.then_block
+		# 	else:
+		# 		code_block = self.else_block
 
-			condition_block.assign_next(code_block.first_block)
-			self.block = hrmi.CompoundBlock(code_block.first_block, [code_block.last_block])
+		# 	condition_block.assign_next(code_block.first_block)
+		# 	self.block = hrmi.CompoundBlock(code_block.first_block, [code_block.last_block])
 
-		elif isinstance(self.condition, AbstractBinaryOperator):
-			self.condition.left.add_to_block(condition_block)
+		# elif isinstance(self.condition, AbstractBinaryOperator):
+			# self.condition.left.add_to_block(condition_block)
 
-			if not (isinstance(self.condition.right, Number) and self.condition.right.value == 0):
-				raise HCInternalError("Unable to directly compare to non-zero values", self)
+			# if not (isinstance(self.condition.right, Number) and self.condition.right.value == 0):
+			# 	raise HCInternalError("Unable to directly compare to non-zero values", self)
 
-			then_bl = self.then_block
-			else_bl = self.else_block
+			# then_bl = self.then_block
+			# else_bl = self.else_block
 
-			negate = isinstance(self.condition, CompareNe)
-			if negate:
-				then_bl, else_bl = else_bl, then_bl
+			# negate = isinstance(self.condition, CompareNe)
+			# if negate:
+			# 	then_bl, else_bl = else_bl, then_bl
 
-			condition_block.assign_jz(then_bl.first_block)
-			condition_block.assign_next(else_bl.first_block)
+			# condition_block.assign_jz(then_bl.first_block)
+			# condition_block.assign_next(else_bl.first_block)
 
-			self.block = hrmi.IfThenElseBlock(condition_block, self.then_block.last_block, self.else_block.last_block)
+			# self.block = hrmi.IfThenElseBlock(condition_block, self.then_block.last_block, self.else_block.last_block)
 
-		else:
-			raise HCInternalError("Unable to generate code for if statement with non-comparison condition", self.condition)
+		# else:
+		# 	raise HCInternalError("Unable to generate code for if statement with non-comparison condition", self.condition)
 
 	def get_namespace(self):
 		ns = self.condition.get_namespace()
@@ -916,19 +918,61 @@ class CompareNe(AbstractEqualityOperator):
 	negate = True
 
 class AbstractInequalityOperator(AbstractBinaryOperator):
+	def validate_branchable(self, namespace):
+		self.left,  injected_stmts    = validate_expr(self.left,  namespace)
+		self.right, injected_stmts_rt = validate_expr(self.right, namespace)
+
+		injected_stmts.extend(injected_stmts_rt)
+
+		if isinstance(self.left, Number) and isinstance(self.right, Number):
+			value = Boolean(self.eval_static(
+					self.left.value, self.right.value))
+			return (value, injected_stmts)
+
+		if is_zero(self.right):
+			return (None, injected_stmts)
+
+		raise HCInternalError("Failed to validate inequality operator", self)
+
+# Represents both '<', and '>=' as these are
+# considered negatives of each other.
+class AbstractLtComparison(AbstractInequalityOperator):
+	negative = False
+
+	# Create a Compound condition block which branches to one block
+	# if it passes the condition, or another if it fails.
+	# then_block and else_block are both CompoundBlock objects
+	def create_branch_block(self, then_block, else_block):
+		if not is_zero(self.right):
+			raise HCInternalError("Unable to directly compare "
+					+ "against a value other than zero", self)
+
+		if self.negative:
+			then_block, else_block = else_block, then_block
+
+		cond_block = hrmi.Block()
+		cond_block.assign_jn(then_block.first_block)
+		cond_block.assign_next(else_block.first_block)
+
+		return hrmi.IfThenElseBlock(cond_block,
+				then_block.last_block, else_block.last_block)
+
+# Represents both '>', and '<=' as these are
+# considered negatives of each other.
+class AbstractGtComparison(AbstractInequalityOperator):
+	negative = False
+
+class CompareLt(AbstractLtComparison):
 	pass
 
-class CompareLt(AbstractInequalityOperator):
+class CompareLe(AbstractGtComparison):
+	negative = True
+
+class CompareGt(AbstractGtComparison):
 	pass
 
-class CompareLe(AbstractInequalityOperator):
-	pass
-
-class CompareGt(AbstractInequalityOperator):
-	pass
-
-class CompareGe(AbstractInequalityOperator):
-	pass
+class CompareGe(AbstractLtComparison):
+	negative = True
 
 # Collection of names used in a part or whole of the program
 class Namespace:
