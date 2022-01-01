@@ -291,37 +291,8 @@ class If(AbstractLine):
 		self.then_block.create_blocks()
 		self.else_block.create_blocks()
 
-		condition_block = hrmi.Block()
-
-		if isinstance(self.condition, Boolean):
-			if self.condition.value:
-				code_block = self.then_block
-			else:
-				code_block = self.else_block
-
-			condition_block.assign_next(code_block.first_block)
-			self.block = hrmi.CompoundBlock(code_block.first_block, [code_block.last_block])
-
-		elif isinstance(self.condition, AbstractBinaryOperator):
-			self.condition.left.add_to_block(condition_block)
-
-			if not (isinstance(self.condition.right, Number) and self.condition.right.value == 0):
-				raise HCInternalError("Unable to directly compare to non-zero values", self)
-
-			then_bl = self.then_block
-			else_bl = self.else_block
-
-			negate = isinstance(self.condition, CompareNe)
-			if negate:
-				then_bl, else_bl = else_bl, then_bl
-
-			condition_block.assign_jz(then_bl.first_block)
-			condition_block.assign_next(else_bl.first_block)
-
-			self.block = hrmi.IfThenElseBlock(condition_block, self.then_block.last_block, self.else_block.last_block)
-
-		else:
-			raise HCInternalError("Unable to generate code for if statement with non-comparison condition", self.condition)
+		self.block = self.condition.create_branch_block(
+				self.then_block, self.else_block)
 
 	def get_namespace(self):
 		ns = self.condition.get_namespace()
@@ -494,10 +465,13 @@ class Boolean(AbstractExpr):
 	def __init__(self, value):
 		self.value = value
 
+	def create_branch_block(self, then_block, else_block):
+		block = then_block if self.value else else_block
+		return hrmi.CompoundBlock(block.first_block, [block.last_block])
+
 	def __repr__(self):
 		return ("Boolean("
 			+ repr(self.value) + ")")
-
 
 class Input(AbstractExpr):
 	def add_to_block(self, block):
@@ -922,11 +896,127 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 
 			return (None, injected_stmts)
 
+	# Create a Compound condition block which branches to one block
+	# if it passes the condition, or another if it fails.
+	# then_block and else_block are both CompoundBlock objects
+	def create_branch_block(self, then_block, else_block):
+		if not is_zero(self.right):
+			raise HCInternalError("Unable to directly compare "
+					+ "to non-zero values", self)
+
+		if self.negate:
+			then_block, else_block = else_block, then_block
+
+		cond_block = hrmi.Block()
+		self.left.add_to_block(cond_block)
+		cond_block.assign_jz(then_block.first_block)
+		cond_block.assign_next(else_block.first_block)
+
+		return hrmi.IfThenElseBlock(cond_block,
+				then_block.last_block, else_block.last_block)
+
 class CompareEq(AbstractEqualityOperator):
 	pass
 
 class CompareNe(AbstractEqualityOperator):
 	negate = True
+
+class AbstractInequalityOperator(AbstractBinaryOperator):
+	# Set to True by subclasses if the comparison
+	# is implemented as the negative of another.
+	negative = False
+
+	# Set to True by subclasses of the positive version of the
+	# comparison includes equality as passing the condition.
+	includes_zero = False
+
+	def validate_branchable(self, namespace):
+		self.left,  injected_stmts    = validate_expr(self.left,  namespace)
+		self.right, injected_stmts_rt = validate_expr(self.right, namespace)
+
+		injected_stmts.extend(injected_stmts_rt)
+
+		if isinstance(self.left, Number) and isinstance(self.right, Number):
+			value = Boolean(self.eval_static(
+					self.left.value, self.right.value))
+			return (value, injected_stmts)
+
+		if is_zero(self.right):
+			return (None, injected_stmts)
+
+		if is_zero(self.left):
+			return (self.swap_operands(), injected_stmts)
+
+		# eg. (x < y) -> (x - y < 0)
+		diff, diff_injected = validate_expr(
+				Subtract(self.left, self.right), namespace)
+		injected_stmts.extend(diff_injected)
+
+		self.left = diff
+		self.right = Number(0)
+
+		return (self, injected_stmts)
+
+	# Create a Compound condition block which branches to one block
+	# if it passes the condition, or another if it fails.
+	# then_block and else_block are both CompoundBlock objects
+	def create_branch_block(self, then_block, else_block):
+		if not is_zero(self.right):
+			raise HCInternalError("Unable to directly compare "
+					+ "against a value other than zero", self)
+
+		if self.negative:
+			then_block, else_block = else_block, then_block
+
+		neg_cond_block = hrmi.Block()
+		self.left.add_to_block(neg_cond_block)
+		neg_cond_block.assign_jn(then_block.first_block)
+
+		if self.includes_zero:
+			zero_cond_block = hrmi.Block()
+			zero_cond_block.assign_jz(then_block.first_block)
+			zero_cond_block.assign_next(else_block.first_block)
+
+			neg_cond_block.assign_next(zero_cond_block)
+		else:
+			neg_cond_block.assign_next(else_block.first_block)
+
+		return hrmi.IfThenElseBlock(neg_cond_block,
+				then_block.last_block, else_block.last_block)
+
+	# Create an reversed version of this operation.
+	# Does not need to check for side effects of operands,
+	# as this should be handled by the calling function.
+	def swap_operands(self):
+		raise NotImplementedError(
+				"AbstractInequalityOperator.swap_operands", self)
+
+# Less than
+class CompareLt(AbstractInequalityOperator):
+	def swap_operands(self):
+		return CompareGt(self.right, self.left)
+
+# Less than or equal to
+class CompareLe(AbstractInequalityOperator):
+	includes_zero = True
+
+	def swap_operands(self):
+		return CompareGe(self.right, self.left)
+
+# Greater than
+class CompareGt(AbstractInequalityOperator):
+	negative = True
+	includes_zero = True
+
+	def swap_operands(self):
+		return CompareLt(self.right, self.left)
+
+# Greater than or equal to
+class CompareGe(AbstractInequalityOperator):
+	negative = True
+
+	def swap_operands(self):
+		return CompareLe(self.right, self.left)
 
 # Collection of names used in a part or whole of the program
 class Namespace:

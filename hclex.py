@@ -21,6 +21,10 @@ tokens = (
 	"EQUALS",
 	"DBL_EQUALS",
 	"NOT_EQUALS",
+	"LESS_THAN",
+	"LESS_THAN_OR_EQUAL",
+	"GREATER_THAN",
+	"GREATER_THAN_OR_EQUAL",
 	"AT",
 	"ADD",
 	"SUBTRACT",
@@ -52,13 +56,17 @@ def t_NUMBER(t):
 	t.value = int(t.value)
 	return t
 
-t_EQUALS     = r"="
-t_DBL_EQUALS = r"=="
-t_NOT_EQUALS = r"!="
-t_AT         = r"@"
-t_ADD        = r"\+"
-t_SUBTRACT   = r"-"
-t_MULTIPLY   = r"\*"
+t_EQUALS                = r"="
+t_DBL_EQUALS            = r"=="
+t_NOT_EQUALS            = r"!="
+t_LESS_THAN             = r"<"
+t_LESS_THAN_OR_EQUAL    = r"<="
+t_GREATER_THAN          = r">"
+t_GREATER_THAN_OR_EQUAL = r">="
+t_AT                    = r"@"
+t_ADD                   = r"\+"
+t_SUBTRACT              = r"-"
+t_MULTIPLY              = r"\*"
 
 def t_error(t):
 	raise TypeError(f"Unknown text on line {t.lineno}: {repr(t.value)}")

@@ -212,7 +212,7 @@ def collapse_redundant_blocks(blocks):
 
 		# But if it is redundant, redirect blocks
 		# which jump to it to skip past it
-		for jmp in block.jumps_in:
+		for jmp in [*block.jumps_in]:
 			jmp.redirect(block.next.dest)
 
 		block.next.dest.unregister_jump_in(block.next)

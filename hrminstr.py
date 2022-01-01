@@ -262,25 +262,24 @@ class Block:
 		if self.next is not None:
 			raise HRMIInternalError("Attempted to assign mulitple unconditional jumps to block")
 
-		while isinstance(next_block, CompoundBlock):
-			next_block = next_block.first_block
-
 		jmp = Jump(self, next_block)
 
 		self.next = jmp
-		next_block.register_jump_in(jmp)
 
-	def assign_jz(self, next_block):
+	def _assign_conditional(self, jump):
 		if self.conditional is not None:
-			raise HRMIInternalError("Attempted to assign mulitple conditional jumps to block")
+			raise HRMIInternalError("Attempted to assign multiple "
+				+ "conditional jumps to block")
 
-		if isinstance(next_block, CompoundBlock):
-			next_block = next_block.first_block
+		self.conditional = jump
 
-		jz = JumpZero(self, next_block)
+	# Assign a conditional block for a 'jump if zero' instruction
+	def assign_jz(self, next_block):
+		self._assign_conditional(JumpZero(self, next_block))
 
-		self.conditional = jz
-		next_block.register_jump_in(jz)
+	# Assign a conditional block for a 'jump if negative' instruction
+	def assign_jn(self, next_block):
+		self._assign_conditional(JumpNegative(self, next_block))
 
 	def register_jump_in(self, jump):
 		self.jumps_in.append(jump)
@@ -356,8 +355,13 @@ class AbstractJump(HRMInstruction):
 	]
 
 	def __init__(self, src, dest):
+		while isinstance(dest, CompoundBlock):
+			dest = dest.first_block
+
 		self.src = src
 		self.dest = dest
+
+		dest.register_jump_in(self)
 
 	def redirect(self, new_dest):
 		self.dest.unregister_jump_in(self)
@@ -391,6 +395,10 @@ class JumpZero(AbstractJump):
 
 	def simulate_hands(self, hands):
 		hands.add_constraint(ValueInHands(0))
+
+class JumpNegative(AbstractJump):
+	def to_asm(self):
+		return "JUMPN " + self.dest.label
 
 # Pseudo blocks used to represent the multiple blocks involved
 # in control flow statements such as 'forever', or 'if'

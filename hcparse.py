@@ -95,6 +95,22 @@ def p_operator_ne(p):
 	"cmp_ne : NOT_EQUALS optws"
 	pass
 
+def p_operator_lt(p):
+	"cmp_lt : LESS_THAN optws"
+	pass
+
+def p_operator_le(p):
+	"cmp_le : LESS_THAN_OR_EQUAL optws"
+	pass
+
+def p_operator_gt(p):
+	"cmp_gt : GREATER_THAN optws"
+	pass
+
+def p_operator_ge(p):
+	"cmp_ge : GREATER_THAN_OR_EQUAL optws"
+	pass
+
 def p_identifier(p):
 	"name : IDENTIFIER optws"
 	p[0] = p[1]
@@ -140,15 +156,35 @@ def p_no_assign(p):
 	p[0] = p[1]
 
 def p_eq(p):
-	"expr : expr cmp_eq expr_s"
+	"expr : expr cmp_eq expr_ineq"
 	p[0] = ast.CompareEq(p[1], p[3])
 
 def p_ne(p):
-	"expr : expr cmp_ne expr_s"
+	"expr : expr cmp_ne expr_ineq"
 	p[0] = ast.CompareNe(p[1], p[3])
 
+def p_expr_ineq(p):
+	"expr : expr_ineq"
+	p[0] = p[1]
+
+def p_le(p):
+	"expr_ineq : expr_ineq cmp_le expr_s"
+	p[0] = ast.CompareLe(p[1], p[3])
+
+def p_ge(p):
+	"expr_ineq : expr_ineq cmp_ge expr_s"
+	p[0] = ast.CompareGe(p[1], p[3])
+
+def p_lt(p):
+	"expr_ineq : expr_ineq cmp_lt expr_s"
+	p[0] = ast.CompareLt(p[1], p[3])
+
+def p_gt(p):
+	"expr_ineq : expr_ineq cmp_gt expr_s"
+	p[0] = ast.CompareGt(p[1], p[3])
+
 def p_expr_s(p):
-	"expr : expr_s"
+	"expr_ineq : expr_s"
 	p[0] = p[1]
 
 def p_expr_m(p):
