@@ -947,7 +947,15 @@ class AbstractInequalityOperator(AbstractBinaryOperator):
 		if is_zero(self.left):
 			return (self.swap_operands(), injected_stmts)
 
-		raise HCInternalError("Failed to validate inequality operator", self)
+		# eg. (x < y) -> (x - y < 0)
+		diff, diff_injected = validate_expr(
+				Subtract(self.left, self.right), namespace)
+		injected_stmts.extend(diff_injected)
+
+		self.left = diff
+		self.right = Number(0)
+
+		return (self, injected_stmts)
 
 	# Create a Compound condition block which branches to one block
 	# if it passes the condition, or another if it fails.
