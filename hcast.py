@@ -910,6 +910,21 @@ class CompareEq(AbstractEqualityOperator):
 class CompareNe(AbstractEqualityOperator):
 	negate = True
 
+class AbstractInequalityOperator(AbstractBinaryOperator):
+	pass
+
+class CompareLt(AbstractInequalityOperator):
+	pass
+
+class CompareLe(AbstractInequalityOperator):
+	pass
+
+class CompareGt(AbstractInequalityOperator):
+	pass
+
+class CompareGe(AbstractInequalityOperator):
+	pass
+
 # Collection of names used in a part or whole of the program
 class Namespace:
 	__slots__ = [
