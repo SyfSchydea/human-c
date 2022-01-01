@@ -147,7 +147,8 @@ class Subtract(AbstractParameterisedInstruction):
 # situationally later during static analysis.
 class PseudoInstruction(HRMInstruction):
 	def to_asm(self):
-		raise HRMIInternalError("Pseudo instructions may not be converted directly to assembler")
+		raise HRMIInternalError("Pseudo instructions may not be "
+				+ "converted directly to assembler", self)
 
 	def attempt_expand(self, hands):
 		raise NotImplementedError("PseudoInstruction.attempt_expand", self)
@@ -176,6 +177,7 @@ class Difference(PseudoInstruction):
 	]
 
 	def __init__(self, left, right):
+		super().__init__()
 		self.left  = left
 		self.right = right
 	
@@ -187,6 +189,11 @@ class Difference(PseudoInstruction):
 			return [Subtract(self.right)]
 		elif hands.has_constraint(VariableInHands(self.right)):
 			return [Subtract(self.left)]
+		else:
+			return [
+				Load(self.left),
+				Subtract(self.right),
+			]
 
 	def __repr__(self):
 		return (type(self).__name__ + "("
