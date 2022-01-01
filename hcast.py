@@ -882,7 +882,24 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 			return (None, injected_stmts)
 		else:
 			# (x == y) -> (x - y == 0)
-			self.left, injected_left = validate_expr(Difference(self.left, self.right), namespace)
+			diff = None
+			left_var  = isinstance(self.left,  VariableRef)
+			right_var = isinstance(self.right, VariableRef)
+			if left_var and right_var:
+				# If both operands are just variables,
+				# decide on the order later
+				diff = Difference(self.left, self.right)
+			elif right_var:
+				diff = Subtract(self.left, self.right)
+			elif left_var:
+				diff = Subtract(self.right, self.left)
+			else:
+				var_name = namespace.get_unique_name()
+				injected_stmts.append(ExprLine(
+						Assignment(var_name, self.right)))
+				self.right = VariableRef(var_name)
+
+			self.left, injected_left = validate_expr(diff, namespace)
 			injected_stmts.extend(injected_left)
 			self.right = Number(0)
 
