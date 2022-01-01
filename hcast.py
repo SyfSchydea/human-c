@@ -944,6 +944,9 @@ class AbstractInequalityOperator(AbstractBinaryOperator):
 		if is_zero(self.right):
 			return (None, injected_stmts)
 
+		if is_zero(self.left):
+			return (self.swap_operands(), injected_stmts)
+
 		raise HCInternalError("Failed to validate inequality operator", self)
 
 	# Create a Compound condition block which branches to one block
@@ -973,18 +976,39 @@ class AbstractInequalityOperator(AbstractBinaryOperator):
 		return hrmi.IfThenElseBlock(neg_cond_block,
 				then_block.last_block, else_block.last_block)
 
-class CompareLt(AbstractInequalityOperator):
-	pass
+	# Create an reversed version of this operation.
+	# Does not need to check for side effects of operands,
+	# as this should be handled by the calling function.
+	def swap_operands(self):
+		raise NotImplementedError(
+				"AbstractInequalityOperator.swap_operands", self)
 
+# Less than
+class CompareLt(AbstractInequalityOperator):
+	def swap_operands(self):
+		return CompareGt(self.right, self.left)
+
+# Less than or equal to
 class CompareLe(AbstractInequalityOperator):
 	includes_zero = True
 
+	def swap_operands(self):
+		return CompareGe(self.right, self.left)
+
+# Greater than
 class CompareGt(AbstractInequalityOperator):
 	negative = True
 	includes_zero = True
 
+	def swap_operands(self):
+		return CompareLt(self.right, self.left)
+
+# Greater than or equal to
 class CompareGe(AbstractInequalityOperator):
 	negative = True
+
+	def swap_operands(self):
+		return CompareLe(self.right, self.left)
 
 # Collection of names used in a part or whole of the program
 class Namespace:
