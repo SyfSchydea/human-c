@@ -149,6 +149,9 @@ class PseudoInstruction(HRMInstruction):
 	def to_asm(self):
 		raise HRMIInternalError("Pseudo instructions may not be converted directly to assembler")
 
+	def attempt_expand(self, hands):
+		raise NotImplementedError("PseudoInstruction.attempt_expand", self)
+
 # Loads a constant value into the hands.
 class LoadConstant(PseudoInstruction):
 	__slots__ = ["value"]
@@ -162,6 +165,33 @@ class LoadConstant(PseudoInstruction):
 
 	def hands_redundant(self, hands_before):
 		return hands_before.has_constraint(ValueInHands(self.value))
+
+# Finds the difference between two variables.
+# May optionally be negated in order to produce more efficient code.
+class Difference(PseudoInstruction):
+	__slots__ = [
+		# Names of variables to compare
+		"left",
+		"right",
+	]
+
+	def __init__(self, left, right):
+		self.left  = left
+		self.right = right
+	
+	def simulate_hands(self, hands):
+		hands.clear_constraints()
+
+	def attempt_expand(self, hands):
+		if hands.has_constraint(VariableInHands(self.left)):
+			return [Subtract(self.right)]
+		elif hands.has_constraint(VariableInHands(self.right)):
+			return [Subtract(self.left)]
+
+	def __repr__(self):
+		return (type(self).__name__ + "("
+			+ repr(self.left) + ", "
+			+ repr(self.right) + ")")
 
 # Block of instructions
 # A block consists of

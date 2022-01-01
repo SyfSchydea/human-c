@@ -76,11 +76,20 @@ def optimise_hands_tracking(blocks):
 		while i < len(blk.instructions):
 			instr = blk.instructions[i]
 
+			# Remove the instruction if it's redundant
 			if instr.hands_redundant(hands):
 				del blk.instructions[i]
-			else:
-				instr.simulate_hands(hands)
-				i += 1
+				continue
+
+			# Expand pseudo instructions if possible
+			if isinstance(instr, hrmi.PseudoInstruction):
+				expanded = instr.attempt_expand(hands)
+				if expanded is not None:
+					blk.instructions[i:i+1] = expanded
+					continue
+
+			instr.simulate_hands(hands)
+			i += 1
 
 def memory_map_contains(memory_map, var_name):
 	for memloc in memory_map:
