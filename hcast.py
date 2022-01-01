@@ -967,6 +967,29 @@ class AbstractLtComparison(AbstractInequalityOperator):
 class AbstractGtComparison(AbstractInequalityOperator):
 	negative = False
 
+	# Create a Compound condition block which branches to one block
+	# if it passes the condition, or another if it fails.
+	# then_block and else_block are both CompoundBlock objects
+	def create_branch_block(self, then_block, else_block):
+		if not is_zero(self.right):
+			raise HCInternalError("Unable to directly compare "
+					+ "against a value other than zero", self)
+
+		if self.negative:
+			then_block, else_block = else_block, then_block
+
+		neg_cond_block = hrmi.Block()
+		self.left.add_to_block(neg_cond_block)
+		neg_cond_block.assign_jn(then_block.first_block)
+
+		zero_cond_block = hrmi.Block()
+		neg_cond_block.assign_next(zero_cond_block)
+		zero_cond_block.assign_jz(then_block.first_block)
+		zero_cond_block.assign_next(else_block.first_block)
+
+		return hrmi.IfThenElseBlock(neg_cond_block,
+				then_block.last_block, else_block.last_block)
+
 class CompareLt(AbstractLtComparison):
 	pass
 
