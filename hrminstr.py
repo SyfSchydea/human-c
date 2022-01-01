@@ -167,6 +167,9 @@ class LoadConstant(PseudoInstruction):
 	def hands_redundant(self, hands_before):
 		return hands_before.has_constraint(ValueInHands(self.value))
 
+	def __repr__(self):
+		return type(self).__name__ + "(" + repr(self.value) + ")"
+
 # Finds the difference between two variables.
 # May optionally be negated in order to produce more efficient code.
 class Difference(PseudoInstruction):

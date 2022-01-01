@@ -626,6 +626,11 @@ class AbstractAdditiveOperator(AbstractBinaryOperator):
 
 		return (None, injected_stmts)
 
+	# Evaluate the value of the expression given statically
+	def eval_static(self, left, right):
+		raise NotImplementedError("AbstractAdditiveOperator.eval_static",
+				self)
+
 class Add(AbstractAdditiveOperator):
 	commutative = True
 
@@ -638,6 +643,9 @@ class Add(AbstractAdditiveOperator):
 			raise HCInternalError("Unable to directly add right operand",
 					self.right)
 
+	def eval_static(self, left, right):
+		return Number(left + right)
+
 class Subtract(AbstractAdditiveOperator):
 	negate_right_operand = True
 
@@ -649,6 +657,11 @@ class Subtract(AbstractAdditiveOperator):
 		else:
 			raise HCInternalError("Unable to directly subtract right operand",
 					self.right)
+
+	# Evaluate the value of the expression given statically
+	def eval_static(self, left, right):
+		return Number(left - right)
+
 
 # Pseudo operator.
 # Like subtraction, but may represent either (x - y) or (y - x) in cases
