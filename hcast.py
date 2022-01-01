@@ -656,7 +656,11 @@ class Difference(AbstractAdditiveOperator):
 	pseudo = True
 
 	def add_to_block(self, block):
-		block.add_instruction(hrmi.Difference(self.left, self.right))
+		if not isinstance(self.left, VariableRef) or not isinstance(self.right, VariableRef):
+			raise HCInternalError("Unable to convert Difference "
+				+ "operator with non variable reference operands")
+
+		block.add_instruction(hrmi.Difference(self.left.name, self.right.name))
 
 _primes = [2]
 
