@@ -295,14 +295,6 @@ class If(AbstractLine):
 				self.then_block, self.else_block)
 
 		# TODO: Move all this stuff off to the various expressions they represent, then delete it from here.
-		# if isinstance(self.condition, Boolean):
-		# 	if self.condition.value:
-		# 		code_block = self.then_block
-		# 	else:
-		# 		code_block = self.else_block
-
-		# 	condition_block.assign_next(code_block.first_block)
-		# 	self.block = hrmi.CompoundBlock(code_block.first_block, [code_block.last_block])
 
 		# elif isinstance(self.condition, AbstractBinaryOperator):
 			# self.condition.left.add_to_block(condition_block)
@@ -496,10 +488,13 @@ class Boolean(AbstractExpr):
 	def __init__(self, value):
 		self.value = value
 
+	def create_branch_block(self, then_block, else_block):
+		block = then_block if self.value else else_block
+		return hrmi.CompoundBlock(block.first_block, [block.last_block])
+
 	def __repr__(self):
 		return ("Boolean("
 			+ repr(self.value) + ")")
-
 
 class Input(AbstractExpr):
 	def add_to_block(self, block):
