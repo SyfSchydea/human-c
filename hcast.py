@@ -540,7 +540,93 @@ class AbstractBinaryOperator(AbstractExpr):
 			+ repr(self.left) + ", "
 			+ repr(self.right) + ")")
 
-class Add(AbstractBinaryOperator):
+class AbstractAdditiveOperator(AbstractBinaryOperator):
+	# True in subclasses if left and right operands may
+	# be swapped without affecting the operation.
+	commutative = False
+
+	# True in subclasses if the right operand is negated by the operation
+	negate_right_operand = False
+
+	# True in subclasses if this variable evaluates to pseudo instructions
+	pseudo = False
+
+	def validate(self, namespace):
+		injected_stmts = []
+
+		# Recurse on both operands
+		self.left, left_injected = validate_expr(self.left, namespace)
+		injected_stmts.extend(left_injected)
+
+		self.right, right_injected = validate_expr(self.right, namespace)
+		injected_stmts.extend(right_injected)
+
+		# Handle constant values
+		if isinstance(self.left, Number) and isinstance(self.right, Number):
+			return (self.eval_static(self.left.value, self.right.value),
+					injected_stmts)
+
+		if is_zero(self.right):
+			return (self.left, injected_stmts)
+
+		if not self.negate_right_operand and is_zero(self.left):
+			return (self.left, injected_stmts)
+
+		if not self.pseudo and isinstance(self.right, VariableRef):
+			return (None, injected_stmts)
+
+		# If the right hand side is another additive operator,
+		# rotate to put the child add/subtract on the left.
+		# Relies on associativity on additive operations
+		if (not self.pseudo
+				and isinstance(self.right, AbstractAdditiveOperator)
+				and not self.right.pseudo):
+			# a + (b + c) -> (a + b) + c
+			# a + (b - c) -> (a + b) - c
+			# a - (b + c) -> (a - b) - c
+			# a - (b - c) -> (a - b) + c
+			a = self.left
+			b = self.right.left
+			c = self.right.right
+
+			negate_b = self.negate_right_operand
+			negate_c = self.negate_right_operand != self.right.negate_right_operand
+
+			l_expr = (Subtract if negate_b else Add)(a,      b)
+			expr   = (Subtract if negate_b else Add)(l_expr, c)
+
+			expr, rot_stmts = validate_expr(expr, namespace)
+			injected_stmts.extend(rot_stmts)
+			return expr, injected_stmts
+
+		# Swap operands if left operand is a variable reference.
+		if self.commutative and isinstance(self.left, VariableRef):
+			self.left, self.right = self.right, self.left
+			return (self, injected_stmts)
+
+		# Must move the right operand out to a new variable.
+
+		# Must take into account side effects, as this operation
+		# may change the order of evaluation.
+		if self.left.has_side_effects() and self.right.has_side_effects():
+			if self.commutative:
+				self.left, self.right = self.right, self.left
+			else:
+				left_name = namespace.get_unique_name()
+				left_assign = ExprLine(Assignment(left_name, self.left))
+				injected_stmts.append(left_assign)
+				self.left = VariableRef(left_name)
+
+		right_name = namespace.get_unique_name()
+		right_assign = ExprLine(Assignment(right_name, self.right))
+		injected_stmts.append(right_assign)
+		self.right = VariableRef(right_name)
+
+		return (None, injected_stmts)
+
+class Add(AbstractAdditiveOperator):
+	commutative = True
+
 	def add_to_block(self, block):
 		self.left.add_to_block(block)
 
@@ -550,63 +636,9 @@ class Add(AbstractBinaryOperator):
 			raise HCInternalError("Unable to directly add right operand",
 					self.right)
 
-	def validate(self, namespace):
-		injected_stmts = []
+class Subtract(AbstractAdditiveOperator):
+	negate_right_operand = True
 
-		while True:
-			# Recurse on both operands
-			self.left, left_injected = validate_expr(self.left, namespace)
-			injected_stmts.extend(left_injected)
-
-			self.right, right_injected = validate_expr(self.right, namespace)
-			injected_stmts.extend(right_injected)
-
-			# Handle constant values
-			if isinstance(self.left, Number) and isinstance(self.right, Number):
-				return (Number(self.left.value + self.right.value), injected_stmts)
-
-			if is_zero(self.left):
-				return (self.right, injected_stmts)
-
-			if is_zero(self.right):
-				return (self.left, injected_stmts)
-
-			if isinstance(self.right, VariableRef):
-				break
-
-			# If the right hand side is an add node, rotate
-			# to put the child add on the left
-			# Relies on associativity
-			if isinstance(self.right, Add):
-				# a + (b + c) -> (a + b) + c
-				a = self.left
-				b = self.right.left
-				c = self.right.right
-				self.left = Add(a, b)
-				self.right = c
-				continue
-
-			if isinstance(self.right, Subtract):
-				# a + (b - c) -> (a + b) - c
-				a = self.left
-				b = self.right.left
-				c = self.right.right
-				self.left = Subtract(Add(a, b), c)
-				self.right = Number(0)
-				continue
-
-			# Swap operands. Relies on commutativity
-			self.left, self.right = self.right, self.left
-
-			if self.right.has_side_effects():
-				var_name = namespace.get_unique_name()
-				new_assign = ExprLine(Assignment(var_name, self.right))
-				injected_stmts.append(new_assign)
-				self.right = VariableRef(var_name)
-
-		return (None, injected_stmts)
-
-class Subtract(AbstractBinaryOperator):
 	def add_to_block(self, block):
 		self.left.add_to_block(block)
 
@@ -616,63 +648,19 @@ class Subtract(AbstractBinaryOperator):
 			raise HCInternalError("Unable to directly subtract right operand",
 					self.right)
 
-	def validate(self, namespace):
-		injected_stmts = []
+# Pseudo operator.
+# Like subtraction, but may represent either (x - y) or (y - x) in cases
+# where either is correct, but one may be more efficient than the other.
+class Difference(AbstractAdditiveOperator):
+	commutative = True
+	pseudo = True
 
-		while True:
-			# Recurse on both operands
-			self.left, left_injected = validate_expr(self.left, namespace)
-			injected_stmts.extend(left_injected)
+	def add_to_block(self, block):
+		if not isinstance(self.left, VariableRef) or not isinstance(self.right, VariableRef):
+			raise HCInternalError("Unable to convert Difference "
+				+ "operator with non variable reference operands")
 
-			self.right, right_injected = validate_expr(self.right, namespace)
-			injected_stmts.extend(right_injected)
-
-			# Handle constant values
-			if isinstance(self.left, Number) and isinstance(self.right, Number):
-				return (Number(self.left.value - self.right.value), injected_stmts)
-
-			if is_zero(self.right):
-				return (self.left, injected_stmts)
-
-			if isinstance(self.right, VariableRef):
-				break
-
-			# If the right hand side is an add node, rotate
-			# to put the child add on the left
-			# Relies on associativity
-			if isinstance(self.right, Add):
-				# a - (b + c) -> (a - b) - c
-				a = self.left
-				b = self.right.left
-				c = self.right.right
-				self.left = Subtract(a, b)
-				self.right = c
-				continue
-
-			if isinstance(self.right, Subtract):
-				# a - (b - c) -> (a - b) + c
-				a = self.left
-				b = self.right.left
-				c = self.right.right
-				self.left = Add(Subtract(a, b), c)
-				self.right = Number(0)
-				continue
-
-			# If we get here, we haven't got anything directly subtractable
-			# into the right hand side, so we need to store the value
-			# of the rhs in a new variable.
-			if self.left.has_side_effects() and self.right.has_side_effects():
-				left_name = namespace.get_unique_name()
-				left_assign = ExprLine(Assignment(left_name, self.left))
-				injected_stmts.append(left_assign)
-				self.left = VariableRef(left_name)
-
-			right_name = namespace.get_unique_name()
-			right_assign = ExprLine(Assignment(right_name, self.right))
-			injected_stmts.append(right_assign)
-			self.right = VariableRef(right_name)
-
-		return (None, injected_stmts)
+		block.add_instruction(hrmi.Difference(self.left.name, self.right.name))
 
 _primes = [2]
 
@@ -898,7 +886,24 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 			return (None, injected_stmts)
 		else:
 			# (x == y) -> (x - y == 0)
-			self.left, injected_left = validate_expr(Subtract(self.left, self.right), namespace)
+			diff = None
+			left_var  = isinstance(self.left,  VariableRef)
+			right_var = isinstance(self.right, VariableRef)
+			if left_var and right_var:
+				# If both operands are just variables,
+				# decide on the order later
+				diff = Difference(self.left, self.right)
+			elif right_var:
+				diff = Subtract(self.left, self.right)
+			elif left_var:
+				diff = Subtract(self.right, self.left)
+			else:
+				var_name = namespace.get_unique_name()
+				injected_stmts.append(ExprLine(
+						Assignment(var_name, self.right)))
+				self.right = VariableRef(var_name)
+
+			self.left, injected_left = validate_expr(diff, namespace)
 			injected_stmts.extend(injected_left)
 			self.right = Number(0)
 

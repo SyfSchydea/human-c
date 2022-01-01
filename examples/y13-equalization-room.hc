@@ -8,5 +8,5 @@
 
 forever
 	x = input
-	if input == x
+	if x == input
 		output x
