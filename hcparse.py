@@ -199,13 +199,21 @@ def p_sub(p):
 	"expr_s : expr_s subtract expr_m"
 	p[0] = ast.Subtract(p[1], p[3])
 
-def p_expr_v(p):
-	"expr_m : expr_v"
+def p_expr_unary(p):
+	"expr_m : expr_unary"
 	p[0] = p[1]
 
 def p_mul(p):
-	"expr_m : expr_m multiply expr_v"
+	"expr_m : expr_m multiply expr_unary"
 	p[0] = ast.Multiply(p[1], p[3])
+
+def p_unary_minus(p):
+	"expr_unary : subtract expr_unary"
+	p[0] = ast.Subtract(ast.Number(0), p[2])
+
+def p_expr_v(p):
+	"expr_unary : expr_v"
+	p[0] = p[1]
 
 def p_input(p):
 	"expr_v : input"
@@ -221,6 +229,8 @@ def p_var(p):
 
 precedence = (
 	("left",  "DBL_EQUALS", "NOT_EQUALS"),
+	("left",  "LESS_THAN", "LESS_THAN_OR_EQUAL",
+			"GREATER_THAN", "GREATER_THAN_OR_EQUAL"),
 	("right", "EQUALS"),
 	("left",  "ADD", "SUBTRACT"),
 	("left",  "MULTIPLY"),
