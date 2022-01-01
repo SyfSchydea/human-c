@@ -10,7 +10,7 @@ forever
 	x = input
 	y = input
 
-	if x < y
+	if y >= x
 		output y
 	else
 		output x
