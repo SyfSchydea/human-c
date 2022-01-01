@@ -294,29 +294,6 @@ class If(AbstractLine):
 		self.block = self.condition.create_branch_block(
 				self.then_block, self.else_block)
 
-		# TODO: Move all this stuff off to the various expressions they represent, then delete it from here.
-
-		# elif isinstance(self.condition, AbstractBinaryOperator):
-			# self.condition.left.add_to_block(condition_block)
-
-			# if not (isinstance(self.condition.right, Number) and self.condition.right.value == 0):
-			# 	raise HCInternalError("Unable to directly compare to non-zero values", self)
-
-			# then_bl = self.then_block
-			# else_bl = self.else_block
-
-			# negate = isinstance(self.condition, CompareNe)
-			# if negate:
-			# 	then_bl, else_bl = else_bl, then_bl
-
-			# condition_block.assign_jz(then_bl.first_block)
-			# condition_block.assign_next(else_bl.first_block)
-
-			# self.block = hrmi.IfThenElseBlock(condition_block, self.then_block.last_block, self.else_block.last_block)
-
-		# else:
-		# 	raise HCInternalError("Unable to generate code for if statement with non-comparison condition", self.condition)
-
 	def get_namespace(self):
 		ns = self.condition.get_namespace()
 		ns.merge(self.then_block.get_namespace())
@@ -919,6 +896,25 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 
 			return (None, injected_stmts)
 
+	# Create a Compound condition block which branches to one block
+	# if it passes the condition, or another if it fails.
+	# then_block and else_block are both CompoundBlock objects
+	def create_branch_block(self, then_block, else_block):
+		if not is_zero(self.right):
+			raise HCInternalError("Unable to directly compare "
+					+ "to non-zero values", self)
+
+		if self.negate:
+			then_block, else_block = else_block, then_block
+
+		cond_block = hrmi.Block()
+		self.left.add_to_block(cond_block)
+		cond_block.assign_jz(then_block.first_block)
+		cond_block.assign_next(else_block.first_block)
+
+		return hrmi.IfThenElseBlock(cond_block,
+				then_block.last_block, else_block.last_block)
+
 class CompareEq(AbstractEqualityOperator):
 	pass
 
@@ -959,6 +955,7 @@ class AbstractLtComparison(AbstractInequalityOperator):
 			then_block, else_block = else_block, then_block
 
 		cond_block = hrmi.Block()
+		self.left.add_to_block(cond_block)
 		cond_block.assign_jn(then_block.first_block)
 		cond_block.assign_next(else_block.first_block)
 
