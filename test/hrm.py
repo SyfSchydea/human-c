@@ -142,13 +142,18 @@ def main():
 	except BossError as e:
 		sys.stderr.write(str(e))
 		sys.exit(1)
-	except InputError as e:
-		sys.stderr.write(str(e))
-		sys.exit(2)
 
 	office.inbox = read_input(sys.stdin)
 	office.outbox = sys.stdout
-	office.execute()
+
+	try:
+		office.execute()
+	except BossError as e:
+		sys.stderr.write(str(e))
+		sys.exit(1)
+	except InboxError as e:
+		sys.stderr.write(str(e))
+		sys.exit(2)
 
 if __name__ == "__main__":
 	main()
