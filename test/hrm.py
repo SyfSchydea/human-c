@@ -136,6 +136,15 @@ def file_outbox(file_out):
 		nonlocal file_out
 
 		file_out.write(str(num) + "\n")
+
+	return outbox
+
+# Create an outbox function which appends to a list
+def list_outbox(lst):
+	def outbox(num):
+		nonlocal lst
+
+		lst.append(num)
 	
 	return outbox
 
