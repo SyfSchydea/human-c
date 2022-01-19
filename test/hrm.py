@@ -24,7 +24,7 @@ class Outbox(Instruction):
 					"can't OUTBOX with\n"
 					"empty hands!\n")
 
-		office.outbox.write(str(office.hands) + "\n")
+		office.outbox(office.hands)
 		office.hands = None
 
 # Holds the runtime for the HRM
@@ -36,7 +36,7 @@ class Office:
 		# Iterator from which inbox values are drawn
 		"inbox",
 
-		# File to which outbox values are written
+		# Function to pass outbox numbers to
 		"outbox",
 
 		# Value held in the worker's hands
@@ -128,6 +128,15 @@ def read_input(file_in):
 
 		yield num
 
+# Create an outbox function which writes to a file
+def file_outbox(file_out):
+	def outbox(num):
+		nonlocal file_out
+
+		file_out.write(str(num) + "\n")
+	
+	return outbox
+
 def main():
 	import sys
 	import argparse
@@ -144,7 +153,7 @@ def main():
 		sys.exit(1)
 
 	office.inbox = read_input(sys.stdin)
-	office.outbox = sys.stdout
+	office.outbox = file_outbox(sys.stdout)
 
 	try:
 		office.execute()
