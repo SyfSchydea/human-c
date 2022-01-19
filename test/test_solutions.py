@@ -31,11 +31,18 @@ class AbstractTests:
 			cls.assertIsNotNone(cls, cls.office)
 
 		def assert_outbox(self, expected, actual):
-			if len(actual) < len(expected):
-				self.fail("Not enough stuff in the\n"
-						"OUTBOX! Management\n"
-						f"expected a total of {len(expected)} items,\n"
-						f"not {len(actual)}!")
+			for i in range(len(expected)):
+				if i >= len(actual):
+					self.fail("Not enough stuff in the\n"
+							"OUTBOX! Management\n"
+							f"expected a total of {len(expected)} items,\n"
+							f"not {len(actual)}!")
+
+				if expected[i] != actual[i]:
+					self.fail("Bad outbox!\n"
+							"Management expected\n"
+							+ repr(expected[i])
+							+ f", but you outboxed {repr(actual[i])}.")
 
 			# Fallback for missed inconsistencies
 			self.assertEqual(expected, actual)
