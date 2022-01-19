@@ -60,6 +60,17 @@ class AbstractTests:
 
 			self.assert_outbox(expected_outbox, outbox)
 
+		def input_to_name(self, inputs):
+			if len(inputs) == 0:
+				return "<empty>"
+
+			if all(type(x) is str for x in inputs):
+				separator = ""
+			else:
+				separator = ", "
+
+			return separator.join(str(x) for x in inputs)
+
 class TestYear1(AbstractTests.TestValidProgram):
 	source_path = "test/source/y1-mail-room.hc"
 	exec_path = "test/source/y1.hrm"
@@ -71,7 +82,7 @@ class TestYear1(AbstractTests.TestValidProgram):
 				[-999, 0, 999],
 				[4, 8, 15],
 				[16, 23, 42]]:
-			with self.subTest():
+			with self.subTest(self.input_to_name(numbers)):
 				self.run_program(numbers, numbers)
 
 class TestYear2(AbstractTests.TestValidProgram):
@@ -86,7 +97,7 @@ class TestYear2(AbstractTests.TestValidProgram):
 			[*"loadprogram"],
 			[*"autoexec"],
 		]:
-			with self.subTest():
+			with self.subTest(self.input_to_name(numbers)):
 				self.run_program(numbers, numbers)
 
 if __name__ == "__main__":
