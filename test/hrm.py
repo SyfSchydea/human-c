@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import re
+
 # Used to represent an error which the boss in-game would throw
 class BossError(Exception):
 	pass
@@ -15,6 +17,15 @@ class Instruction:
 	def __repr__(self):
 		return type(self).__name__ + "()"
 
+class ParameterisedInstruction(Instruction):
+	__slots__ = ["param"]
+
+	def __init__(self, param):
+		self.param = param
+
+	def __repr__(self):
+		return type(self).__name__ + "(" + repr(self.param) + ")"
+
 class Inbox(Instruction):
 	def execute(self, office):
 		office.hands = next(office.inbox)
@@ -29,11 +40,19 @@ class Outbox(Instruction):
 		office.outbox(office.hands)
 		office.hands = None
 
+class Jump(ParameterisedInstruction):
+	def execute(self, office):
+		# Subtract one to account for the pc advancing after execution
+		office.program_counter = self.param - 1
+
 # Holds the runtime for the HRM
 class Office:
 	__slots__ = [
 		# List of Instructions
 		"program",
+
+		# Dict of labels {"name": position}
+		"labels",
 
 		# Iterator from which inbox values are drawn
 		"inbox",
@@ -49,8 +68,9 @@ class Office:
 		"program_counter",
 	]
 
-	def __init__(self, program):
+	def __init__(self, program, labels):
 		self.program = program
+		self.labels = labels
 
 		self.inbox = None
 		self.outbox = None
@@ -71,7 +91,7 @@ class Office:
 
 	# Creates a clone of the current office.
 	def clone(self):
-		copy = Office(self.program)
+		copy = Office(self.program, self.labels)
 		copy.inbox = self.inbox
 		copy.outbox = self.outbox
 		copy.hands = self.hands
@@ -90,6 +110,7 @@ BOSS_PASTE_ERROR = ("You can't paste that\n"
 
 def load_program(path):
 	program = []
+	labels = {}
 
 	with open(path) as f:
 		for line in f:
@@ -108,18 +129,39 @@ def load_program(path):
 		for line in f:
 			line = line.strip()
 
+			match = re.match(r"([a-zA-Z\d]+)\s*:\s*(.*)$", line)
+			if match:
+				name = match[1]
+				labels[name] = len(program)
+				line = match[2]
+
 			if line == "":
 				continue
 
-			if line == "INBOX":
+			match = re.match(r"([A-Z]+)(?:\s*([a-zA-Z\d]+))?", line)
+			if not match:
+				raise BossError(BOSS_PASTE_ERROR
+						+ f"Failed to parse line: '{line}'\n")
+
+			instr = match[1]
+			param = match[2]
+
+			if instr == "INBOX":
 				program.append(Inbox())
-			elif line == "OUTBOX":
+			elif instr == "OUTBOX":
 				program.append(Outbox())
+			elif instr == "JUMP":
+				program.append(Jump(param))
 			else:
 				raise BossError(BOSS_PASTE_ERROR
 						+ f"Unrecognised instruction: '{line}'\n")
 
-	return Office(program)
+	# Swap jump parameters from label names to positions in the code
+	for instr in program:
+		if isinstance(instr, Jump):
+			instr.param = labels[instr.param]
+
+	return Office(program, labels)
 
 # Generate numbers from the given file
 def read_input(file_in):
@@ -129,15 +171,17 @@ def read_input(file_in):
 		if line == "":
 			continue
 
-		try:
-			num = int(line)
-		except ValueError as e:
-			raise InboxError(e)
+		if re.fullmatch(r"-?\d+", line):
+			val = int(line)
 
-		if num < MIN_VALUE or num > MAX_VALUE:
-			raise InboxError("number out of bounds: " + repr(num))
+			if val < MIN_VALUE or val > MAX_VALUE:
+				raise InboxError("number out of bounds: " + repr(val))
+		elif re.fullmatch(r"[a-zA-Z]", line):
+			val = line
+		else:
+			raise InboxError("Invalid inbox value: " + repr(line))
 
-		yield num
+		yield val
 
 # Create an outbox function which writes to a file
 def file_outbox(file_out):
