@@ -30,12 +30,21 @@ class TestYear1(unittest.TestCase):
 		cls.assertIsNotNone(cls, cls.office)
 
 	def test_simple(self):
-		outbox = []
-		self.office.inbox = iter([1, 2, 3])
-		self.office.outbox = hrm.list_outbox(outbox)
-		self.office.execute()
+		for numbers in [
+				[1, 2, 3],
+				[0, 0, 0],
+				[-999, 0, 999],
+				[4, 8, 15],
+				[16, 23, 42]]:
+			with self.subTest():
+				office = self.office.clone()
+				outbox = []
 
-		self.assertEqual(outbox, [1, 2, 3])
+				office.inbox = iter(numbers)
+				office.outbox = hrm.list_outbox(outbox)
+				office.execute()
+
+				self.assertEqual(outbox, numbers)
 
 if __name__ == "__main__":
 	unittest.main()

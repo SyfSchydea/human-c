@@ -69,6 +69,15 @@ class Office:
 
 			self.program_counter += 1
 
+	# Creates a clone of the current office.
+	def clone(self):
+		copy = Office(self.program)
+		copy.inbox = self.inbox
+		copy.outbox = self.outbox
+		copy.hands = self.hands
+		copy.program_counter = self.program_counter
+		return copy
+
 	def __repr__(self):
 		return ("Office(" + repr(self.program) + ", "
 				+ "hands=" + repr(self.hands) + ", "
