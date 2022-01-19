@@ -29,6 +29,16 @@ class TestYear1(unittest.TestCase):
 		cls.office = hrm.load_program(cls.exec_path)
 		cls.assertIsNotNone(cls, cls.office)
 
+	def assert_outbox(self, expected, actual):
+		if len(actual) < len(expected):
+			self.fail("Not enough stuff in the\n"
+					"OUTBOX! Management\n"
+					f"expected a total of {len(expected)} items,\n"
+					f"not {len(actual)}!")
+
+		# Fallback for missed inconsistencies
+		self.assertEqual(expected, actual)
+
 	def test_simple(self):
 		for numbers in [
 				[1, 2, 3],
@@ -44,7 +54,7 @@ class TestYear1(unittest.TestCase):
 				office.outbox = hrm.list_outbox(outbox)
 				office.execute()
 
-				self.assertEqual(outbox, numbers)
+				self.assert_outbox(numbers, outbox)
 
 if __name__ == "__main__":
 	unittest.main()
