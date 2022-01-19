@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
+# Used to represent an error which the boss in-game would throw
 class BossError(Exception):
 	pass
 
+# Used to represent an error about the values fed into the inbox
 class InboxError(Exception):
 	pass
 
