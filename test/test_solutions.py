@@ -52,7 +52,10 @@ class TestYear1(unittest.TestCase):
 
 				office.inbox = iter(numbers)
 				office.outbox = hrm.list_outbox(outbox)
-				office.execute()
+				try:
+					office.execute()
+				except hrm.BossError as be:
+					self.fail(be)
 
 				self.assert_outbox(numbers, outbox)
 
