@@ -13,6 +13,7 @@ class PhaseOneParserError(Exception):
 
 def p_line_list(p):
 	"lines : line NL lines"
+	p[1].lineno = p.lineno(1)
 	p[0] = p[3]
 	p[0].insert(0, p[1])
 
