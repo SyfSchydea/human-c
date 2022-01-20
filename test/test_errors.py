@@ -33,7 +33,8 @@ class TestPhase2Parser(AbstractTests.TestError):
 	# Test longer indent than expected
 	def test_invalid_indent(self):
 		self.assertError("test/source/errors/invalid-indent.hc",
-				"Unexpected indent on line 5",
+				"Unexpected indent on line 5\n"
+					"Expected no indent but got 1 tab",
 				"An unexpected/invalid indent should produce a useful error")
 
 	def test_forever_no_indent(self):
