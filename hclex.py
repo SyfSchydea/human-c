@@ -36,15 +36,17 @@ tokens = (
 
 def track(tok):
 	if not hasattr(tok.lexer, "colno"):
-		tok.lexer.colno = 0
+		tok.lexer.colno = 1
 
+	tok.colno = tok.lexer.colno
 	tok.lexer.colno += len(tok.value)
 	return tok
 
 def t_NL(t):
 	r"\n"
+	t.colno = t.lexer.colno
 	t.lexer.lineno += 1
-	t.lexer.colno = 0
+	t.lexer.colno = 1
 	return t
 
 def t_WS(t):
@@ -139,7 +141,7 @@ def t_MULTIPLY(t):
 
 def t_error(t):
 	raise LexerError(f"Unexpected character at "
-			f"line {t.lineno}, col {t.lexer.colno + 1}: "
+			f"line {t.lineno}, col {t.lexer.colno}: "
 			+ repr(t.value.rstrip('\n')))
 
 def main():
