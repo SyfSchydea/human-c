@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from dataclasses import dataclass
+import re
 
 import hcast as ast
 import hcparse
@@ -44,6 +45,20 @@ def parse_from_path(path):
 	with open(path) as f:
 		return parse_file(f)
 
+def readable_indent(indent):
+	if len(indent) == 0:
+		return "no indent"
+
+	match = re.fullmatch(r"\t*| *", indent)
+	if match:
+		name = "tab" if indent[0] == "\t" else "space"
+		if len(indent) != 1:
+			name += "s"
+
+		return str(len(indent)) + " " + name
+
+	return "".join("<tab>" if c == "\t" else "<space>" for c in indent)
+
 @dataclass
 class StackEntry:
 	statements: list
@@ -81,7 +96,9 @@ def nest_lines(line_list):
 				stack.pop()
 			else:
 				raise HCParseError("Unexpected indent on line "
-						+ str(line.lineno))
+						+ str(line.lineno) + "\n"
+						+ "Expected " + readable_indent(stack[-1].indent)
+						+ " but got " + readable_indent(line.indent))
 
 		if isinstance(line, ast.Else):
 			last_if = stack[-1].statements.get_last_stmt()
