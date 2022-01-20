@@ -29,5 +29,12 @@ class TestParser(AbstractTests.TestError):
 				"Empty output statement should result in "
 						"an informative syntax error")
 
+class TestPhase2Parser(AbstractTests.TestError):
+	# Test longer indent than expected
+	def test_invalid_indent(self):
+		self.assertError("test/source/errors/invalid-indent.hc",
+				"Unexpected indent on line 5",
+				"An unexpected/invalid indent should produce a useful error")
+
 if __name__ == "__main__":
 	unittest.main()
