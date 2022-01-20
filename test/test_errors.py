@@ -36,5 +36,11 @@ class TestPhase2Parser(AbstractTests.TestError):
 				"Unexpected indent on line 5",
 				"An unexpected/invalid indent should produce a useful error")
 
+	def test_forever_no_indent(self):
+		self.assertError("test/source/errors/forever-no-indent.hc",
+				"Expected indented block on line 5",
+				"A forever loop should expect a greater "
+					"indent on the following line")
+
 if __name__ == "__main__":
 	unittest.main()
