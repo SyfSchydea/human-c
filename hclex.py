@@ -2,6 +2,9 @@
 
 from ply import lex, yacc
 
+class LexerError(Exception):
+	pass
+
 tokens = (
 	"NL",
 	"WS",
@@ -31,45 +34,113 @@ tokens = (
 	"MULTIPLY",
 )
 
+def track(tok):
+	if not hasattr(tok.lexer, "colno"):
+		tok.lexer.colno = 0
+
+	tok.lexer.colno += len(tok.value)
+	return tok
+
 def t_NL(t):
 	r"\n"
 	t.lexer.lineno += 1
+	t.lexer.colno = 0
 	return t
 
-t_WS = r"[\t ]+"
+def t_WS(t):
+	r"[\t ]+"
+	return track(t)
 
-t_COMMENT = r"//[^\n]*"
+def t_COMMENT(t):
+	r"//[^\n]*"
+	return track(t)
 
-t_LET     = r"let"
-t_INIT    = r"init"
-t_INPUT   = r"input"
-t_OUTPUT  = r"output"
-t_IF      = r"if"
-t_ELSE    = r"else"
-t_FOREVER = r"forever"
+def t_LET(t):
+	r"let"
+	return track(t)
 
-t_IDENTIFIER = (r"(?!(?:let|forever|input|output|init|if|else)"
-	+ r"[^a-zA-Z_\d])[a-zA-Z_][a-zA-Z_\d]*")
+def t_INIT(t):
+	r"init"
+	return track(t)
+
+def t_INPUT(t):
+	r"input"
+	return track(t)
+
+def t_OUTPUT(t):
+	r"output"
+	return track(t)
+
+def t_IF(t):
+	r"if"
+	return track(t)
+
+def t_ELSE(t):
+	r"else"
+	return track(t)
+
+def t_FOREVER(t):
+	r"forever"
+	return track(t)
+
+def t_IDENTIFIER(t):
+	r"(?!(?:let|forever|input|output|init|if|else)[^a-zA-Z_\d])[a-zA-Z_][a-zA-Z_\d]*"
+	return track(t)
 
 def t_NUMBER(t):
 	r"\d+"
+	track(t)
 	t.value = int(t.value)
 	return t
 
-t_EQUALS                = r"="
-t_DBL_EQUALS            = r"=="
-t_NOT_EQUALS            = r"!="
-t_LESS_THAN             = r"<"
-t_LESS_THAN_OR_EQUAL    = r"<="
-t_GREATER_THAN          = r">"
-t_GREATER_THAN_OR_EQUAL = r">="
-t_AT                    = r"@"
-t_ADD                   = r"\+"
-t_SUBTRACT              = r"-"
-t_MULTIPLY              = r"\*"
+def t_EQUALS(t):
+	r"="
+	return track(t)
+
+def t_DBL_EQUALS(t):
+	r"=="
+	return track(t)
+
+def t_NOT_EQUALS(t):
+	r"!="
+	return track(t)
+
+def t_LESS_THAN(t):
+	r"<"
+	return track(t)
+
+def t_LESS_THAN_OR_EQUAL(t):
+	r"<="
+	return track(t)
+
+def t_GREATER_THAN(t):
+	r">"
+	return track(t)
+
+def t_GREATER_THAN_OR_EQUAL(t):
+	r">="
+	return track(t)
+
+def t_AT(t):
+	r"@"
+	return track(t)
+
+def t_ADD(t):
+	r"\+"
+	return track(t)
+
+def t_SUBTRACT(t):
+	r"-"
+	return track(t)
+
+def t_MULTIPLY(t):
+	r"\*"
+	return track(t)
 
 def t_error(t):
-	raise TypeError(f"Unknown text on line {t.lineno}: {repr(t.value)}")
+	raise LexerError(f"Unexpected character at "
+			f"line {t.lineno}, col {t.lexer.colno + 1}: "
+			+ repr(t.value.rstrip('\n')))
 
 def main():
 	import sys

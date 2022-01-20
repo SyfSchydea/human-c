@@ -4,6 +4,7 @@ import string
 
 from hcast import generate_name
 import hrminstr as hrmi
+import hclex
 import hcparse2
 
 # Extract a list of all unique blocks from a statement list
@@ -273,10 +274,14 @@ def main():
 	args = parser.parse_args()
 
 	tree = None
-	if args.input is None:
-		tree = hcparse2.parse_file(sys.stdin)
-	else:
-		tree = hcparse2.parse_from_path(args.input)
+	try:
+		if args.input is None:
+			tree = hcparse2.parse_file(sys.stdin)
+		else:
+			tree = hcparse2.parse_from_path(args.input)
+	except hclex.LexerError as e:
+		print(e, file=sys.stderr)
+		sys.exit(1)
 
 	initial_memory_map = tree.get_memory_map()
 	namespace = tree.get_namespace()
