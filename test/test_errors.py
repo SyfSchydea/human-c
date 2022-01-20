@@ -41,6 +41,12 @@ class TestPhase2Parser(AbstractTests.TestError):
 				"Expected indented block on line 5",
 				"A forever loop should expect a greater "
 					"indent on the following line")
+	
+	def test_mixed_indent(self):
+		self.assertError("test/source/errors/mixed-indent.hc",
+				"Unexpected indent on line 9\n"
+					"Expected 1 tab but got 4 spaces",
+				"Mixed indentation should throw a useful error")
 
 if __name__ == "__main__":
 	unittest.main()
