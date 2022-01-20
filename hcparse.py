@@ -8,6 +8,9 @@ import hcast as ast
 # Phase 1 parsing:
 # Creates list of lines
 
+class PhaseOneParserError(Exception):
+	pass
+
 def p_line_list(p):
 	"lines : line NL lines"
 	p[0] = p[3]
@@ -228,10 +231,10 @@ precedence = (
 
 def p_error(p):
 	if not p:
-		print("Error at eof")
-		return
+		raise PhaseOneParserError("Syntax error at eof")
 
-	print("Syntax error on line", p.lineno, p.type, repr(p.value))
+	raise PhaseOneParserError(f"Syntax error at {repr(p.value)} "
+			f"on line {p.lineno}, col {p.colno}")
 
 def main():
 	import sys
