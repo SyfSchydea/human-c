@@ -66,9 +66,11 @@ def nest_lines(line_list):
 			# TODO: get some line numbers in these errors
 			# TODO: And print out the indent, (and what's expected?)
 			if not line.indent.startswith(stack[-2].indent):
-				raise HCParseError("Non-matching indent")
+				raise HCParseError("Non-matching indent on line "
+						+ str(line.lineno))
 			if len(line.indent) <= len(stack[-2].indent):
-				raise HCParseError("Expected indented block")
+				raise HCParseError("Expected indented block on line "
+						+ str(line.lineno))
 
 			stack[-1].indent = line.indent
 		
@@ -78,15 +80,19 @@ def nest_lines(line_list):
 					and stack[-1].indent.startswith(line.indent)):
 				stack.pop()
 			else:
-				raise HCParseError("Invalid indent")
+				raise HCParseError("Unexpected indent on line "
+						+ str(line.lineno))
 
 		if isinstance(line, ast.Else):
 			last_if = stack[-1].statements.get_last_stmt()
 			if not isinstance(last_if, ast.If):
-				raise HCParseError("Else statement has no matching If statement")
+				raise HCParseError("Else statement on "
+						f"line {line.lineno} "
+						"has no matching If statement")
 
 			if last_if.else_block is not None:
-				raise HCParseError("If statement has multiple Else statements")
+				raise HCParseError("If statement has a second else "
+						"statement on line " + str(line.lineno))
 
 			last_if.else_block = ast.StatementList()
 			stack.append(StackEntry(last_if.else_block))

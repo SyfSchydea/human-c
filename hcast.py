@@ -60,12 +60,15 @@ validate_expr            = get_validate_func("validate")
 
 class AbstractLine:
 	__slots__ = [
+		"block",
+
 		"indent",
-		"block"
+		"lineno",
 	]
 
-	def __init__(self, indent=""):
+	def __init__(self, indent="", lineno=None):
 		self.indent = indent
+		self.lineno = lineno
 
 	# Get list of memory values and variable assigned by this statement
 	# Defaults to returning an empty tuple, since most statements don't add any

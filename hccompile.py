@@ -280,7 +280,9 @@ def main():
 			tree = hcparse2.parse_file(sys.stdin)
 		else:
 			tree = hcparse2.parse_from_path(args.input)
-	except (hclex.LexerError, hcparse.PhaseOneParserError) as e:
+	except (hclex.LexerError,
+			hcparse.PhaseOneParserError,
+			hcparse2.HCParseError) as e:
 		print(e, file=sys.stderr)
 		sys.exit(1)
 
