@@ -85,3 +85,17 @@ class AbstractTests:
 
 			return separator.join(str(x) for x in inputs)
 
+	# Run test cases on programs expected to throw an error in the compiler
+	class TestError(unittest.TestCase):
+		# Check that the given file throws the specified error.
+		# Checks that the expected error is in the stderr output.
+		def assertError(self, src_path, expected_error, msg=None):
+			process = subprocess.run([
+						"./hccompile.py",
+						os.path.join(TEST_SOURCE_DIR, src_path)],
+					capture_output=True)
+
+			self.assertNotEqual(0, process.returncode,
+					"Invalid source should not exit with code 0")
+			self.assertEqual(expected_error,
+					process.stderr.decode().rstrip(), msg)
