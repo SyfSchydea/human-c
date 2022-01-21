@@ -51,5 +51,12 @@ class TestInitStmt(AbstractTests.TestError):
 				"Declaring a variable with a duplicate floor address should "
 						"produce an informative error message")
 
+class TestVariables(AbstractTests.TestError):
+	def test_output_invalid_var(self):
+		self.assertError("errors/output-invalid-var.hc",
+				"Variable 'foo' referenced before assignment on line 4",
+				"Attempting to use a variable before it is assigned should "
+						"produce a useful error message")
+
 if __name__ == "__main__":
 	unittest.main()
