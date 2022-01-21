@@ -45,5 +45,11 @@ class TestInitStmt(AbstractTests.TestError):
 				"Declaring a variable with a duplicate name should "
 						"produce an informative error message")
 
+	def test_duplicate_address(self):
+		self.assertError("errors/init-dupe-addr.hc",
+				"Multiple variables declared at floor address 0 on line 5",
+				"Declaring a variable with a duplicate floor address should "
+						"produce an informative error message")
+
 if __name__ == "__main__":
 	unittest.main()
