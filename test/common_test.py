@@ -12,8 +12,9 @@ TEST_SOURCE_DIR = "test/source"
 class AbstractTests:
 	# Run test cases for a valid program
 	class TestValidProgram(unittest.TestCase):
-		# Expected to have source_path and exec_path properties to define
-		# the locations of the source files, and compiled files.
+		# source_path    - Location of source file
+		# exec_path      - Location to save compiled file
+		# initial_memory - Initial floor state
 
 		@classmethod
 		def get_src(cls):
@@ -37,7 +38,10 @@ class AbstractTests:
 							+ e.stderr.decode(), file=sys.stderr)
 					raise
 
-			cls.office = hrm.load_program(cls.get_exe())
+			if not hasattr(cls, "initial_memory"):
+				cls.initial_memory = []
+
+			cls.office = hrm.load_program(cls.get_exe(), cls.initial_memory)
 			cls.assertIsNotNone(cls, cls.office)
 
 		def assert_outbox(self, expected, actual):

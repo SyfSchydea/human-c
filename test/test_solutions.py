@@ -24,12 +24,24 @@ class TestYear2(AbstractTests.TestValidProgram):
 		for numbers in [
 			[1, 2, 3],
 			[],
-			[*"bootsequence"],
-			[*"loadprogram"],
-			[*"autoexec"],
+			[*"BOOTSEQUENCE"],
+			[*"LOADPROGRAM"],
+			[*"AUTOEXEC"],
 		]:
 			with self.subTest(self.input_to_name(numbers)):
 				self.run_program(numbers, numbers)
+
+class TestYear3(AbstractTests.TestValidProgram):
+	source_path = "y3-copy-floor.hc"
+	exec_path = "y3.hrm"
+
+	initial_memory = [
+		"U", "J", "X",
+		"G", "B", "E",
+	]
+
+	def test_simple(self):
+		self.run_program([], [*"BUG"])
 
 if __name__ == "__main__":
 	unittest.main()

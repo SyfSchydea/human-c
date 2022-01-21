@@ -40,6 +40,17 @@ class Outbox(Instruction):
 		office.outbox(office.hands)
 		office.hands = None
 
+class CopyFrom(ParameterisedInstruction):
+	def execute(self, office):
+		value = office.floor[self.param]
+		if value is None:
+			raise BossError("Empty value! You can't\n"
+					"COPYFROM with an empty\n"
+					"tile on the floor! Try writing\n"
+					"something to that tile first.\n")
+
+		office.hands = value
+
 class Jump(ParameterisedInstruction):
 	def execute(self, office):
 		# Subtract one to account for the pc advancing after execution
@@ -61,14 +72,18 @@ class Office:
 		"outbox",
 
 		# Value held in the worker's hands
-		# Either an int from -999 to 999, or None if empty
+		# Can be an int from -999 to 999, and single letter string, or None if empty
 		"hands",
+
+		# Array of memory values on the floor
+		# Can be an int from -999 to 999, and single letter string, or None if empty
+		"floor",
 
 		# Id of next instruction
 		"program_counter",
 	]
 
-	def __init__(self, program, labels):
+	def __init__(self, program, labels, floor=None):
 		self.program = program
 		self.labels = labels
 
@@ -76,6 +91,7 @@ class Office:
 		self.outbox = None
 
 		self.hands = None
+		self.floor = floor if floor is not None else []
 		self.program_counter = 0
 
 	def execute(self):
@@ -91,7 +107,7 @@ class Office:
 
 	# Creates a clone of the current office.
 	def clone(self):
-		copy = Office(self.program, self.labels)
+		copy = Office(self.program, self.labels, [*self.floor])
 		copy.inbox = self.inbox
 		copy.outbox = self.outbox
 		copy.hands = self.hands
@@ -108,9 +124,11 @@ BOSS_PASTE_ERROR = ("You can't paste that\n"
 		"to be a valid program!\n"
 		"\n")
 
-def load_program(path):
+def load_program(path, initial_floor=[]):
 	program = []
 	labels = {}
+
+	floor_size = len(initial_floor)
 
 	with open(path) as f:
 		for line in f:
@@ -150,6 +168,23 @@ def load_program(path):
 				program.append(Inbox())
 			elif instr == "OUTBOX":
 				program.append(Outbox())
+			elif instr == "COPYFROM":
+				if not re.match(r"\d+", param):
+					raise BossError(BOSS_PASTE_ERROR
+						+ f"COPYFROM parameter should be a number ({param})\n")
+
+				addr = int(param)
+				if addr >= floor_size:
+					raise BossError("You can't paste that here! It is a\n"
+							"valid program, but required more\n"
+							"slots on the floor than we have\n"
+							"available here! We have only 3\n"
+							"slots available on this floor!\n"
+							"\n"
+							f"Attempted to use instruction '{line}', "
+							f"but have only {floor_size} spots on the floor\n")
+
+				program.append(CopyFrom(addr))
 			elif instr == "JUMP":
 				program.append(Jump(param))
 			else:
@@ -161,7 +196,7 @@ def load_program(path):
 		if isinstance(instr, Jump):
 			instr.param = labels[instr.param]
 
-	return Office(program, labels)
+	return Office(program, labels, initial_floor)
 
 # Generate numbers from the given file
 def read_input(file_in):
