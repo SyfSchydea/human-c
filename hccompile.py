@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
+import sys
 import string
 
-from hcast import generate_name
+from hcast import generate_name, HCTypeError
 import hrminstr as hrmi
 import hclex
 import hcparse
@@ -266,7 +267,6 @@ def assign_memory(blocks, initial_memory):
 				inst.loc = get_addr(inst.loc)
 
 def main():
-	import sys
 	import argparse
 
 	parser = argparse.ArgumentParser(description="Compile .hc files")
@@ -284,9 +284,14 @@ def main():
 			hcparse.PhaseOneParserError,
 			hcparse2.HCParseError) as e:
 		print(e, file=sys.stderr)
-		sys.exit(1)
+		return 1
 
-	initial_memory_map = tree.get_memory_map()
+	try:
+		initial_memory_map = tree.get_memory_map()
+	except HCTypeError as e:
+		print(e, file=sys.stderr)
+		return 1
+
 	namespace = tree.get_namespace()
 	tree.validate_structure(namespace)
 
@@ -318,6 +323,8 @@ def main():
 		asm = block.to_asm()
 		if len(asm) > 0:
 			print(asm)
-	
+
+	return 0
+
 if __name__ == "__main__":
-	main()
+	sys.exit(main())

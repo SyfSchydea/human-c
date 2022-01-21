@@ -183,9 +183,11 @@ class StatementList:
 			new_memory = stmt.get_memory_map()
 			for mem in new_memory:
 				if mem.name in memory_by_name:
-					raise HCTypeError(f"Variable {mem.name} declared twice")
+					raise HCTypeError(f"Variable '{mem.name}' declared twice "
+							f"on line {stmt.lineno}")
 				if mem.loc in memory_by_loc:
-					raise HCTypeError(f"Multiple variables declared at {mem.loc}")
+					raise HCTypeError(f"Multiple variables declared at floor "
+							f"address {mem.loc} on line {stmt.lineno}")
 
 				memory_by_name[mem.name] = mem
 				memory_by_loc[mem.loc] = mem
