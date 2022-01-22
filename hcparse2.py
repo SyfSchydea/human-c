@@ -3,14 +3,12 @@
 from dataclasses import dataclass
 import re
 
+from hcexceptions import HCParseError
 import hcast as ast
 import hcparse
 
 # Phase 2 parsing:
 # Creates proper tree from lines and indents
-
-class HCParseError(Exception):
-	pass
 
 def main():
 	import sys

@@ -2,8 +2,7 @@
 
 from ply import lex, yacc
 
-class LexerError(Exception):
-	pass
+from hcexceptions import LexerError
 
 tokens = (
 	"NL",

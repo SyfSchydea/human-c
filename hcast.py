@@ -3,9 +3,7 @@ import math
 from dataclasses import dataclass
 
 import hrminstr as hrmi
-
-class HCTypeError(Exception):
-	pass
+from hcexceptions import HCTypeError
 
 class HCInternalError(Exception):
 	pass
@@ -91,7 +89,7 @@ class Declare(AbstractLine):
 
 	def create_block(self):
 		# Empty block
-		self.block = hrmi.Block()
+		self.block = hrmi.Block(self.lineno)
 
 	def __init__(self, name, indent=""):
 		super().__init__(indent)
@@ -117,7 +115,7 @@ class InitialValueDeclaration(AbstractLine):
 
 	def create_block(self):
 		# Empty block
-		self.block = hrmi.Block()
+		self.block = hrmi.Block(self.lineno)
 	
 	def get_memory_map(self):
 		return (MemoryLocation(self.name, self.loc),)
@@ -158,7 +156,7 @@ class StatementList:
 
 	def create_blocks(self):
 		if len(self.stmts) == 0:
-			self.first_block = self.last_block = hrmi.Block()
+			self.first_block = self.last_block = hrmi.Block(self.lineno)
 			return
 
 		for stmt in self.stmts:
@@ -297,7 +295,7 @@ class If(AbstractLine):
 		self.else_block.create_blocks()
 
 		self.block = self.condition.create_branch_block(
-				self.then_block, self.else_block)
+				self.then_block, self.else_block, self.lineno)
 
 	def get_namespace(self):
 		ns = self.condition.get_namespace()
@@ -352,7 +350,7 @@ class Output(AbstractLineWithExpr):
 	__slots__ = ["expr"]
 
 	def create_block(self):
-		self.block = hrmi.Block()
+		self.block = hrmi.Block(self.lineno)
 		self.expr.add_to_block(self.block)
 		self.block.add_instruction(hrmi.Output())
 
@@ -363,7 +361,7 @@ class Output(AbstractLineWithExpr):
 
 class ExprLine(AbstractLineWithExpr):
 	def create_block(self):
-		self.block = hrmi.Block()
+		self.block = hrmi.Block(self.lineno)
 		self.expr.add_to_block(self.block)
 
 	def __repr__(self):
@@ -470,7 +468,7 @@ class Boolean(AbstractExpr):
 	def __init__(self, value):
 		self.value = value
 
-	def create_branch_block(self, then_block, else_block):
+	def create_branch_block(self, then_block, else_block, lineno=None):
 		block = then_block if self.value else else_block
 		return hrmi.CompoundBlock(block.first_block, [block.last_block])
 
@@ -904,7 +902,7 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 	# Create a Compound condition block which branches to one block
 	# if it passes the condition, or another if it fails.
 	# then_block and else_block are both CompoundBlock objects
-	def create_branch_block(self, then_block, else_block):
+	def create_branch_block(self, then_block, else_block, lineno):
 		if not is_zero(self.right):
 			raise HCInternalError("Unable to directly compare "
 					+ "to non-zero values", self)
@@ -912,7 +910,7 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 		if self.negate:
 			then_block, else_block = else_block, then_block
 
-		cond_block = hrmi.Block()
+		cond_block = hrmi.Block(lineno)
 		self.left.add_to_block(cond_block)
 		cond_block.assign_jz(then_block.first_block)
 		cond_block.assign_next(else_block.first_block)
@@ -965,7 +963,7 @@ class AbstractInequalityOperator(AbstractBinaryOperator):
 	# Create a Compound condition block which branches to one block
 	# if it passes the condition, or another if it fails.
 	# then_block and else_block are both CompoundBlock objects
-	def create_branch_block(self, then_block, else_block):
+	def create_branch_block(self, then_block, else_block, lineno):
 		if not is_zero(self.right):
 			raise HCInternalError("Unable to directly compare "
 					+ "against a value other than zero", self)
@@ -973,12 +971,12 @@ class AbstractInequalityOperator(AbstractBinaryOperator):
 		if self.negative:
 			then_block, else_block = else_block, then_block
 
-		neg_cond_block = hrmi.Block()
+		neg_cond_block = hrmi.Block(lineno)
 		self.left.add_to_block(neg_cond_block)
 		neg_cond_block.assign_jn(then_block.first_block)
 
 		if self.includes_zero:
-			zero_cond_block = hrmi.Block()
+			zero_cond_block = hrmi.Block(lineno)
 			zero_cond_block.assign_jz(then_block.first_block)
 			zero_cond_block.assign_next(else_block.first_block)
 

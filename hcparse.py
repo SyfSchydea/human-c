@@ -2,14 +2,12 @@
 
 from ply import yacc
 
+from hcexceptions import HCParseError
 from hclex import tokens
 import hcast as ast
 
 # Phase 1 parsing:
 # Creates list of lines
-
-class PhaseOneParserError(Exception):
-	pass
 
 def p_line_list(p):
 	"lines : line NL lines"
@@ -232,9 +230,9 @@ precedence = (
 
 def p_error(p):
 	if not p:
-		raise PhaseOneParserError("Syntax error at eof")
+		raise HCParseError("Syntax error at eof")
 
-	raise PhaseOneParserError(f"Syntax error at {repr(p.value)} "
+	raise HCParseError(f"Syntax error at {repr(p.value)} "
 			f"on line {p.lineno}, col {p.colno}")
 
 def main():

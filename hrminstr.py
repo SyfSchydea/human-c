@@ -1,3 +1,5 @@
+from hcexceptions import HCTypeError
+
 class HRMIInternalError(Exception):
 	pass
 
@@ -219,9 +221,11 @@ class Block:
 		# Properties used in hands tracking
 		"hands_at_start",
 		"hand_data_propagated",
+
+		"lineno",
 	]
 
-	def __init__(self):
+	def __init__(self, lineno=None):
 		self.instructions = []
 		self.jumps_in = []
 		self.conditional = None
@@ -230,7 +234,9 @@ class Block:
 
 		self.hands_at_start = None
 		self.hand_data_propagated = False
-	
+
+		self.lineno = lineno
+
 	def needs_label(self):
 		for jmp in self.jumps_in:
 			if not (isinstance(jmp, Jump) and jmp.implicit):
@@ -334,8 +340,9 @@ class Block:
 		# If propagation reaches all the way back to the starting block,
 		# then the variable may be read before it is written to.
 		if len(self.jumps_in) == 0 and not is_pre_initialised:
-			raise HRMIInternalError(f"Variable '{var_name}' may "
-					+ "be referenced before assignment")
+			raise HCTypeError(f"Variable '{var_name}' "
+					"referenced before assignment "
+					"on line " + str(self.lineno))
 
 		# Propagation has not stopped by the start of this
 		# block, so propagate into the next blocks
