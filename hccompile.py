@@ -3,10 +3,9 @@
 import sys
 import string
 
-from hcast import generate_name, HCTypeError
+from hcexceptions import HCTypeError, LexerError, HCParseError
+from hcast import generate_name
 import hrminstr as hrmi
-import hclex
-import hcparse
 import hcparse2
 
 # Extract a list of all unique blocks from a statement list
@@ -280,34 +279,32 @@ def main():
 			tree = hcparse2.parse_file(sys.stdin)
 		else:
 			tree = hcparse2.parse_from_path(args.input)
-	except (hclex.LexerError,
-			hcparse.PhaseOneParserError,
-			hcparse2.HCParseError) as e:
+	except (LexerError, HCParseError) as e:
 		print(e, file=sys.stderr)
 		return 1
 
 	try:
 		initial_memory_map = tree.get_memory_map()
+		namespace = tree.get_namespace()
+		tree.validate_structure(namespace)
+
+		tree.create_blocks()
+		end_block = hrmi.Block()
+		tree.last_block.assign_next(end_block)
+
+		blocks = extract_blocks(tree)
+
+		# Ensure end block is at the end, if it's still present
+		if end_block in blocks:
+			blocks.remove(end_block)
+			blocks.append(end_block)
+
+		optimise_hands_tracking(blocks)
+		record_variable_use(blocks, initial_memory_map)
 	except HCTypeError as e:
 		print(e, file=sys.stderr)
 		return 1
 
-	namespace = tree.get_namespace()
-	tree.validate_structure(namespace)
-
-	tree.create_blocks()
-	end_block = hrmi.Block()
-	tree.last_block.assign_next(end_block)
-
-	blocks = extract_blocks(tree)
-
-	# Ensure end block is at the end, if it's still present
-	if end_block in blocks:
-		blocks.remove(end_block)
-		blocks.append(end_block)
-
-	optimise_hands_tracking(blocks)
-	record_variable_use(blocks, initial_memory_map)
 	optimise_variable_needs(blocks, initial_memory_map)
 
 	collapse_redundant_blocks(blocks)
