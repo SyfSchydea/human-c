@@ -33,15 +33,20 @@ class AbstractTests:
 							check=True, stderr=subprocess.PIPE,
 							stdout=exe)
 				except subprocess.CalledProcessError as e:
-					print("Error encountered while attempting to compile "
+					cls.fail(cls,
+							"Error encountered while attempting to compile "
 							+ cls.get_src() + ":\n"
-							+ e.stderr.decode(), file=sys.stderr)
+							+ e.stderr.decode())
 					raise
 
-			if not hasattr(cls, "initial_memory"):
-				cls.initial_memory = []
+			if hasattr(cls, "initial_memory"):
+				initial_memory = cls.initial_memory
+			elif hasattr(cls, "floor_size"):
+				initial_memory = [None] * cls.floor_size
+			else:
+				initial_memory = []
 
-			cls.office = hrm.load_program(cls.get_exe(), cls.initial_memory)
+			cls.office = hrm.load_program(cls.get_exe(), initial_memory)
 			cls.assertIsNotNone(cls, cls.office)
 
 		def assert_outbox(self, expected, actual):

@@ -51,6 +51,15 @@ class CopyFrom(ParameterisedInstruction):
 
 		office.hands = value
 
+class CopyTo(ParameterisedInstruction):
+	def execute(self, office):
+		if office.hands is None:
+			raise BossError("Empty value! You\n"
+					"can't COPYTO with\n"
+					"empty hands!")
+
+		office.floor[self.param] = office.hands
+
 class Jump(ParameterisedInstruction):
 	def execute(self, office):
 		# Subtract one to account for the pc advancing after execution
@@ -119,6 +128,24 @@ class Office:
 				+ "hands=" + repr(self.hands) + ", "
 				+ "pc=" + repr(self.program_counter) + ")")
 
+def validate_floor_addr(param, floor_size=0, lineno=None):
+	if not re.match(r"\d+", param):
+		raise BossError(BOSS_PASTE_ERROR
+			+ f"{type(self).__name__} parameter should be a number ({param})\n")
+
+	addr = int(param)
+	if addr >= floor_size:
+		raise BossError("You can't paste that here! It is a\n"
+				"valid program, but required more\n"
+				"slots on the floor than we have\n"
+				"available here! We have only 3\n"
+				"slots available on this floor!\n"
+				"\n"
+				f"Attempted to access floor address {addr} on line {lineno}, "
+				f"but have only {floor_size} spots on the floor\n")
+
+	return addr
+
 BOSS_PASTE_ERROR = ("You can't paste that\n"
 		"here! It does not appear\n"
 		"to be a valid program!\n"
@@ -131,7 +158,10 @@ def load_program(path, initial_floor=[]):
 	floor_size = len(initial_floor)
 
 	with open(path) as f:
+		lineno = 0
+
 		for line in f:
+			lineno += 1
 			line = line.strip()
 
 			if line == "":
@@ -145,6 +175,7 @@ def load_program(path, initial_floor=[]):
 					"'-- HUMAN RESOURCE MACHINE PROGRAM --'\n")
 
 		for line in f:
+			lineno += 1
 			line = line.strip()
 
 			match = re.match(r"([a-zA-Z\d]+)\s*:\s*(.*)$", line)
@@ -169,22 +200,9 @@ def load_program(path, initial_floor=[]):
 			elif instr == "OUTBOX":
 				program.append(Outbox())
 			elif instr == "COPYFROM":
-				if not re.match(r"\d+", param):
-					raise BossError(BOSS_PASTE_ERROR
-						+ f"COPYFROM parameter should be a number ({param})\n")
-
-				addr = int(param)
-				if addr >= floor_size:
-					raise BossError("You can't paste that here! It is a\n"
-							"valid program, but required more\n"
-							"slots on the floor than we have\n"
-							"available here! We have only 3\n"
-							"slots available on this floor!\n"
-							"\n"
-							f"Attempted to use instruction '{line}', "
-							f"but have only {floor_size} spots on the floor\n")
-
-				program.append(CopyFrom(addr))
+				program.append(CopyFrom(validate_floor_addr(param, floor_size, lineno)))
+			elif instr == "COPYTO":
+				program.append(CopyTo(validate_floor_addr(param, floor_size, lineno)))
 			elif instr == "JUMP":
 				program.append(Jump(param))
 			else:
