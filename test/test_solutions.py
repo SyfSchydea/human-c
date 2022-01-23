@@ -76,5 +76,42 @@ class TestYear6(AbstractTests.TestValidProgram):
 			with self.subTest(self.input_to_name(inbox)):
 				self.run_program(inbox, expected_outbox)
 
+class TestYear7(AbstractTests.TestValidProgram):
+	source_path = "solutions/y7-zero-exterminator.hc"
+	exec_path = "solutions/y7.hrm"
+
+	floor_size = 9
+
+	def test_solution(self):
+		for inbox, expected_outbox in [
+			([8, 0, -1, "F", 0, 0,  3, 0], [8, -1, "F",  3]),
+			([5, 0,  2, "E", 0, 0, -2, 0], [5,  2, "E", -2]),
+			([8, 0,  0, "E", 0, 0,  4, 0], [8, "E", 4]),
+			([5, 0,  5, "E", 0, 0,  0, 0], [5,  5, "E"]),
+			([3, 0,  0, "D", 0, 0,  0, 0], [3, "D"]),
+		]:
+			with self.subTest(self.input_to_name(inbox)):
+				self.run_program(inbox, expected_outbox)
+
+	# The game's inboxes for this test are incredibly
+	# formulaic, and allow for solutions which do not
+	# work for arbitrary inboxes.
+	# This function checks that the compiled solution
+	# works for more complex inboxes.
+	def test_extended(self):
+		for inbox, expected_outbox in [
+			([], []),
+			([0, 0, 0, 0], []),
+			([1, 2, 3, 4], [1, 2, 3, 4]),
+			([0, 0,  2, "E", 0, 0, -2, 0], [2, "E", -2]),
+			([5, 9,  2, "E", 0, 0, -2, 0], [5,  9,  2,  "E", -2]),
+			([5, 0,  2,  0,  0, 0, -2, 0], [5,  2, -2]),
+			([5, 0,  2, "E", 9, 0, -2, 0], [5,  2, "E",  9, -2]),
+			([5, 0,  2, "E", 0, 9, -2, 0], [5,  2, "E",  9, -2]),
+			([5, 0,  2, "E", 0, 0, -2, 9], [5,  2, "E", -2,  9]),
+		]:
+			with self.subTest(self.input_to_name(inbox)):
+				self.run_program(inbox, expected_outbox)
+
 if __name__ == "__main__":
 	unittest.main()
