@@ -37,7 +37,7 @@ class TestVarStartsWithKeyword(AbstractTests.TestValidProgram):
 	floor_size = 16
 
 	# This file reads six values from the inbox, then outputs the first value
-	def test_noop(self):
+	def test_output(self):
 		for inbox, expected_outbox in [
 				([1, 2, 3, 4, 5, 6], [1]),
 				([13, 11, 7, 5, 3, 2], [13]),
