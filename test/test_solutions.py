@@ -113,5 +113,29 @@ class TestYear7(AbstractTests.TestValidProgram):
 			with self.subTest(self.input_to_name(inbox)):
 				self.run_program(inbox, expected_outbox)
 
+class TestYear8(AbstractTests.TestValidProgram):
+	source_path = "solutions/y8-tripler-room.hc"
+	exec_path = "solutions/y8.hc"
+
+	floor_size = 3
+
+	def test_solution(self):
+		for inbox, expected_outbox in [
+			([6, -6, 3, 0], [18, -18,  9, 0]),
+			([6, -1, 7, 0], [18,  -3, 21, 0]),
+			([5, -3, 7, 0], [15,  -9, 21, 0]),
+		]:
+			with self.subTest(self.input_to_name(inbox)):
+				self.run_program(inbox, expected_outbox)
+
+	def test_extended(self):
+		for inbox, expected_outbox in [
+			([], []),
+			([111, 222, 333], [333, 666, 999]),
+			([-1, 0, 1], [-3, 0, 3]),
+		]:
+			with self.subTest(self.input_to_name(inbox)):
+				self.run_program(inbox, expected_outbox)
+
 if __name__ == "__main__":
 	unittest.main()
