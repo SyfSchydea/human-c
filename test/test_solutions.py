@@ -115,7 +115,7 @@ class TestYear7(AbstractTests.TestValidProgram):
 
 class TestYear8(AbstractTests.TestValidProgram):
 	source_path = "solutions/y8-tripler-room.hc"
-	exec_path = "solutions/y8.hc"
+	exec_path = "solutions/y8.hrm"
 
 	floor_size = 3
 
