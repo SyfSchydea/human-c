@@ -60,6 +60,31 @@ class CopyTo(ParameterisedInstruction):
 
 		office.floor[self.param] = office.hands
 
+ADD_LETTER_ERROR = (
+		"You can't ADD with a\n"
+		"letter! What would\n"
+		"that even mean?!")
+
+class Add(ParameterisedInstruction):
+	def execute(self, office):
+		value = office.floor[self.param]
+		if value is None:
+			raise BossError("Empty value! You can't ADD\n"
+					"with an empty tile on the\n"
+					"floor! Try writing something\n"
+					"to that tile first")
+		if type(value) is str:
+			raise BossError(ADD_LETTER_ERROR)
+
+		if office.hands is None:
+			raise BossError("Empty value! You \n"
+					"can't COPYTO with\n"
+					"empty hands!")
+		if type(office.hands) is str:
+			raise BossError(ADD_LETTER_ERROR)
+
+		office.hands += value
+
 class Jump(ParameterisedInstruction):
 	def execute(self, office):
 		# Subtract one to account for the pc advancing after execution
@@ -203,6 +228,8 @@ def load_program(path, initial_floor=[]):
 				program.append(CopyFrom(validate_floor_addr(param, floor_size, lineno)))
 			elif instr == "COPYTO":
 				program.append(CopyTo(validate_floor_addr(param, floor_size, lineno)))
+			elif instr == "ADD":
+				program.append(Add(validate_floor_addr(param, floor_size, lineno)))
 			elif instr == "JUMP":
 				program.append(Jump(param))
 			else:

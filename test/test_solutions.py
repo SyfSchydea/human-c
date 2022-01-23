@@ -60,5 +60,21 @@ class TestYear4(AbstractTests.TestValidProgram):
 			with self.subTest(self.input_to_name(inbox)):
 				self.run_program(inbox, expected_outbox)
 
+class TestYear4(AbstractTests.TestValidProgram):
+	source_path = "solutions/y6-rainy-summer.hc"
+	exec_path = "solutions/y6.hrm"
+
+	floor_size = 3
+
+	def test_solution(self):
+		for inbox, expected_outbox in [
+			([2, 2, 4, 0, -6, 9, 9, -5], [4,   4,  3,  4]),
+			([8, 0, 1, 4, -4, 1, 0, -7], [8,   5, -3, -7]),
+			([3, 5, 4, 0, -2, 3, 4, -2], [8,   4,  1,  2]),
+			([6, 7, 9, 9, -7, 2, 6, -3], [13, 18, -5,  3]),
+		]:
+			with self.subTest(self.input_to_name(inbox)):
+				self.run_program(inbox, expected_outbox)
+
 if __name__ == "__main__":
 	unittest.main()
