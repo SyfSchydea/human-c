@@ -35,3 +35,18 @@ class TestConstEq(AbstractTests.TestValidProgram):
 				[3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7, 9, 3]]:
 			with self.subTest(self.input_to_name(numbers)):
 				self.run_program(numbers, numbers)
+
+class TestConstNe(AbstractTests.TestValidProgram):
+	source_path = "misc/const-ne.hc"
+	exec_path = "misc/const-ne.hrm"
+
+	# This program always output nothing.
+	# This tests use of constant evaluation of !=
+	def test_noop(self):
+		for inbox in [
+				[],
+				[1, 2, 3],
+				[*"foobar"],
+				[3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7, 9, 3]]:
+			with self.subTest(self.input_to_name(inbox)):
+				self.run_program(inbox, [])
