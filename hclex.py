@@ -4,18 +4,20 @@ from ply import lex, yacc
 
 from hcexceptions import LexerError
 
+keywords = {
+	"init":    "INIT",
+	"input":   "INPUT",
+	"output":  "OUTPUT",
+	"if":      "IF",
+	"else":    "ELSE",
+	"forever": "FOREVER",
+	"let":     "LET",
+}
+
 tokens = (
 	"NL",
 	"WS",
 	"COMMENT",
-
-	"LET",
-	"INIT",
-	"INPUT",
-	"OUTPUT",
-	"IF",
-	"ELSE",
-	"FOREVER",
 
 	"IDENTIFIER",
 	"NUMBER",
@@ -31,6 +33,8 @@ tokens = (
 	"ADD",
 	"SUBTRACT",
 	"MULTIPLY",
+
+	*keywords.values(),
 )
 
 def track(tok):
@@ -56,36 +60,13 @@ def t_COMMENT(t):
 	r"//[^\n]*"
 	return track(t)
 
-def t_LET(t):
-	r"let"
-	return track(t)
-
-def t_INIT(t):
-	r"init"
-	return track(t)
-
-def t_INPUT(t):
-	r"input"
-	return track(t)
-
-def t_OUTPUT(t):
-	r"output"
-	return track(t)
-
-def t_IF(t):
-	r"if"
-	return track(t)
-
-def t_ELSE(t):
-	r"else"
-	return track(t)
-
-def t_FOREVER(t):
-	r"forever"
-	return track(t)
-
 def t_IDENTIFIER(t):
-	r"(?!(?:let|forever|input|output|init|if|else)[^a-zA-Z_\d])[a-zA-Z_][a-zA-Z_\d]*"
+	r"[a-zA-Z_][a-zA-Z_\d]*"
+
+	# Check for reserved words
+	if t.value in keywords:
+		t.type = keywords[t.value]
+
 	return track(t)
 
 def t_NUMBER(t):
