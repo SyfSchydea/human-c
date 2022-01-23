@@ -54,3 +54,20 @@ class TestConstMul(AbstractTests.TestEcho):
 	# Tests constant evaluation of the multiplication operator
 	source_path = "misc/const-mul.hc"
 	floor_size = 16
+
+class TestAddMulPrecedence(AbstractTests.TestValidProgram):
+	source_path = "misc/add-mul-precedence.hc"
+	floor_size = 16
+
+	# Tests operator precedence of add and multiply.
+	# Should read pairs of inputs, x and y, and output (3 * x) + y
+	def test_output(self):
+		for inbox, expected_outbox in [
+				([], []),
+				([1, 1, 4, 67, 7, 11, 28, 49], [4, 79, 32, 133]),
+				([-80, 89, -87, -64, 41, -84], [-151, -325, 39]),
+				([68, 0, 0, 59, 0, 0], [204, 59, 0]),
+				([12, -36, -8, 24], [0, 0]),
+		]:
+			with self.subTest(self.input_to_name(inbox)):
+				self.run_program(inbox, expected_outbox)
