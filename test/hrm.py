@@ -17,6 +17,16 @@ class Instruction:
 	def __repr__(self):
 		return type(self).__name__ + "()"
 
+	# Checks that the worker's hands are not empty
+	# when an instruction expects to use the value
+	def emptyHandsCheck(self, office):
+		if office.hands is None:
+			raise BossError(
+					"Empty value! You\n"
+					f"can't {self.mnemonic} with\n"
+					"empty hands!\n")
+
+
 class ParameterisedInstruction(Instruction):
 	__slots__ = ["param"]
 
@@ -27,20 +37,22 @@ class ParameterisedInstruction(Instruction):
 		return type(self).__name__ + "(" + repr(self.param) + ")"
 
 class Inbox(Instruction):
+	mnemonic = "INBOX"
+
 	def execute(self, office):
 		office.hands = next(office.inbox)
 
 class Outbox(Instruction):
-	def execute(self, office):
-		if office.hands is None:
-			raise BossError("Empty value! You\n"
-					"can't OUTBOX with\n"
-					"empty hands!\n")
+	mnemonic = "OUTBOX"
 
+	def execute(self, office):
+		self.emptyHandsCheck(office)
 		office.outbox(office.hands)
 		office.hands = None
 
 class CopyFrom(ParameterisedInstruction):
+	mnemonic = "COPYFROM"
+
 	def execute(self, office):
 		value = office.floor[self.param]
 		if value is None:
@@ -52,12 +64,10 @@ class CopyFrom(ParameterisedInstruction):
 		office.hands = value
 
 class CopyTo(ParameterisedInstruction):
-	def execute(self, office):
-		if office.hands is None:
-			raise BossError("Empty value! You\n"
-					"can't COPYTO with\n"
-					"empty hands!")
+	mnemonic = "COPYTO"
 
+	def execute(self, office):
+		self.emptyHandsCheck(office)
 		office.floor[self.param] = office.hands
 
 ADD_LETTER_ERROR = (
@@ -66,6 +76,8 @@ ADD_LETTER_ERROR = (
 		"that even mean?!")
 
 class Add(ParameterisedInstruction):
+	mnemonic = "ADD"
+
 	def execute(self, office):
 		value = office.floor[self.param]
 		if value is None:
@@ -76,19 +88,26 @@ class Add(ParameterisedInstruction):
 		if type(value) is str:
 			raise BossError(ADD_LETTER_ERROR)
 
-		if office.hands is None:
-			raise BossError("Empty value! You \n"
-					"can't COPYTO with\n"
-					"empty hands!")
+		self.emptyHandsCheck(office)
 		if type(office.hands) is str:
 			raise BossError(ADD_LETTER_ERROR)
 
 		office.hands += value
 
 class Jump(ParameterisedInstruction):
+	mnemonic = "JUMP"
+
 	def execute(self, office):
 		# Subtract one to account for the pc advancing after execution
 		office.program_counter = self.param - 1
+
+class JumpZ(ParameterisedInstruction):
+	mnemonic = "JUMPZ"
+
+	def execute(self, office):
+		self.emptyHandsCheck(office)
+		if office.hands == 0:
+			office.program_counter = self.param - 1
 
 # Holds the runtime for the HRM
 class Office:
@@ -232,13 +251,15 @@ def load_program(path, initial_floor=[]):
 				program.append(Add(validate_floor_addr(param, floor_size, lineno)))
 			elif instr == "JUMP":
 				program.append(Jump(param))
+			elif instr == "JUMPZ":
+				program.append(JumpZ(param))
 			else:
 				raise BossError(BOSS_PASTE_ERROR
 						+ f"Unrecognised instruction: '{line}'\n")
 
 	# Swap jump parameters from label names to positions in the code
 	for instr in program:
-		if isinstance(instr, Jump):
+		if isinstance(instr, Jump) or isinstance(instr, JumpZ):
 			instr.param = labels[instr.param]
 
 	return Office(program, labels, initial_floor)
