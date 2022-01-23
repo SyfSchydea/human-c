@@ -6,7 +6,6 @@
 // order. Repeat until the INBOX
 // is empty.
 
-let x
 forever
 	x = input
 	output input

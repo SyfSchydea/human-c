@@ -83,29 +83,6 @@ class AbstractLine:
 	def get_namespace(self):
 		raise NotImplementedError("AbstractLine.get_namespace", self)
 
-# eg: let x
-class Declare(AbstractLine):
-	__slots__ = ["name"]
-
-	def create_block(self):
-		# Empty block
-		self.block = hrmi.Block(self.lineno)
-
-	def __init__(self, name, indent=""):
-		super().__init__(indent)
-		self.name = name
-
-	def get_namespace(self):
-		return Namespace(self.name)
-
-	def validate(self, namespace):
-		return None
-
-	def __repr__(self):
-		return ("Declare("
-			+ repr(self.name) + ", "
-			+ repr(self.indent) + ")")
-
 # eg: init Zero @ 10
 class InitialValueDeclaration(AbstractLine):
 	__slots__ = [

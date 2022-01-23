@@ -41,10 +41,6 @@ def p_no_ws(p):
 	"optws :"
 	p[0] = ""
 
-def p_keyword_let(p):
-	"let : LET optws"
-	pass
-
 def p_keyword_init(p):
 	"init : INIT optws"
 	pass
@@ -120,10 +116,6 @@ def p_identifier(p):
 def p_number(p):
 	"number : NUMBER optws"
 	p[0] = p[1]
-
-def p_declare_var(p):
-	"stmt : let name"
-	p[0] = ast.Declare(p[2])
 
 def p_declare_init(p):
 	"stmt : init name at number"
