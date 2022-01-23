@@ -156,7 +156,7 @@ class StatementList:
 
 	def create_blocks(self):
 		if len(self.stmts) == 0:
-			self.first_block = self.last_block = hrmi.Block(self.lineno)
+			self.first_block = self.last_block = hrmi.Block()
 			return
 
 		for stmt in self.stmts:
