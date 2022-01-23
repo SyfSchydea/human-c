@@ -55,3 +55,10 @@ class TestConstAdd(AbstractTests.TestEcho):
 	# Tests constant evaluation of the add operator
 	source_path = "misc/const-add.hc"
 	exec_path = "misc/const-add.hrm"
+
+class TestConstMul(AbstractTests.TestEcho):
+	# Tests constant evaluation of the multiplication operator
+	source_path = "misc/const-mul.hc"
+	exec_path = "misc/const-mul.hrm"
+
+	floor_size = 16
