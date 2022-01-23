@@ -55,6 +55,8 @@ class TestVarStartsWithKeyword(AbstractTests.TestValidProgram):
 	source_path = "misc/var-starts-with-keyword.hc"
 	exec_path = "misc/var-starts-with-keyword.hrm"
 
+	floor_size = 16
+
 	# This file reads six values from the inbox, then outputs the first value
 	def test_noop(self):
 		for inbox, expected_outbox in [
