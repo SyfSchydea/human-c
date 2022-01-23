@@ -11,7 +11,6 @@ keywords = {
 	"if":      "IF",
 	"else":    "ELSE",
 	"forever": "FOREVER",
-	"let":     "LET",
 }
 
 tokens = (
