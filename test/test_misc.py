@@ -20,3 +20,18 @@ class TestMixedIndent(AbstractTests.TestValidProgram):
 				[3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7, 9, 3]]:
 			with self.subTest(self.input_to_name(numbers)):
 				self.run_program(numbers, numbers)
+
+class TestConstEq(AbstractTests.TestValidProgram):
+	source_path = "misc/const-eq.hc"
+	exec_path = "misc/const-eq.hrm"
+
+	# This program should act as an echo, like the solution
+	# to year 2, but tests evaluation of equality operators
+	# and if statements on constant values.
+	def test_echo(self):
+		for numbers in [
+				[1, 2, 3],
+				[*"foobar"],
+				[3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7, 9, 3]]:
+			with self.subTest(self.input_to_name(numbers)):
+				self.run_program(numbers, numbers)
