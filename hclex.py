@@ -94,16 +94,16 @@ def t_NUMBER(t):
 	t.value = int(t.value)
 	return t
 
-def t_EQUALS(t):
-	r"="
-	return track(t)
-
 def t_DBL_EQUALS(t):
 	r"=="
 	return track(t)
 
 def t_NOT_EQUALS(t):
 	r"!="
+	return track(t)
+
+def t_EQUALS(t):
+	r"="
 	return track(t)
 
 def t_LESS_THAN(t):
