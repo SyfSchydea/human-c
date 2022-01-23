@@ -4,6 +4,7 @@ import unittest
 import os
 import sys
 import subprocess
+import re
 
 import hrm
 
@@ -26,6 +27,14 @@ class AbstractTests:
 
 		@classmethod
 		def setUpClass(cls):
+			if not hasattr(cls, "exec_path"):
+				match = re.fullmatch(r"(.*)\.hc", cls.source_path)
+				if not match:
+					raise Exception("No exec path specified, "
+							"and source path in unexpected format. "
+							"Unable to find path to save resulting program to")
+				cls.exec_path = match[1] + ".hrm"
+
 			with open(cls.get_exe(), "w") as exe:
 				try:
 					process = subprocess.run(

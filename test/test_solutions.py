@@ -4,7 +4,6 @@ from common_test import AbstractTests
 
 class TestYear1(AbstractTests.TestValidProgram):
 	source_path = "solutions/y1-mail-room.hc"
-	exec_path = "solutions/y1.hrm"
 
 	def test_solution(self):
 		for numbers in [
@@ -18,7 +17,6 @@ class TestYear1(AbstractTests.TestValidProgram):
 
 class TestYear2(AbstractTests.TestValidProgram):
 	source_path = "solutions/y2-busy-mail-room.hc"
-	exec_path = "solutions/y2.hrm"
 
 	def test_solution(self):
 		for numbers in [
@@ -33,7 +31,6 @@ class TestYear2(AbstractTests.TestValidProgram):
 
 class TestYear3(AbstractTests.TestValidProgram):
 	source_path = "solutions/y3-copy-floor.hc"
-	exec_path = "solutions/y3.hrm"
 
 	initial_memory = [
 		"U", "J", "X",
@@ -45,8 +42,6 @@ class TestYear3(AbstractTests.TestValidProgram):
 
 class TestYear4(AbstractTests.TestValidProgram):
 	source_path = "solutions/y4-scrambler-handler.hc"
-	exec_path = "solutions/y4.hrm"
-
 	floor_size = 3
 
 	def test_solution(self):
@@ -62,8 +57,6 @@ class TestYear4(AbstractTests.TestValidProgram):
 
 class TestYear6(AbstractTests.TestValidProgram):
 	source_path = "solutions/y6-rainy-summer.hc"
-	exec_path = "solutions/y6.hrm"
-
 	floor_size = 3
 
 	def test_solution(self):
@@ -78,8 +71,6 @@ class TestYear6(AbstractTests.TestValidProgram):
 
 class TestYear7(AbstractTests.TestValidProgram):
 	source_path = "solutions/y7-zero-exterminator.hc"
-	exec_path = "solutions/y7.hrm"
-
 	floor_size = 9
 
 	def test_solution(self):
@@ -115,8 +106,6 @@ class TestYear7(AbstractTests.TestValidProgram):
 
 class TestYear8(AbstractTests.TestValidProgram):
 	source_path = "solutions/y8-tripler-room.hc"
-	exec_path = "solutions/y8.hrm"
-
 	floor_size = 3
 
 	def test_solution(self):
