@@ -60,7 +60,7 @@ class TestYear4(AbstractTests.TestValidProgram):
 			with self.subTest(self.input_to_name(inbox)):
 				self.run_program(inbox, expected_outbox)
 
-class TestYear4(AbstractTests.TestValidProgram):
+class TestYear6(AbstractTests.TestValidProgram):
 	source_path = "solutions/y6-rainy-summer.hc"
 	exec_path = "solutions/y6.hrm"
 
