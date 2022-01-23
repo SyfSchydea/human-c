@@ -50,3 +50,18 @@ class TestConstNe(AbstractTests.TestValidProgram):
 				[3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7, 9, 3]]:
 			with self.subTest(self.input_to_name(inbox)):
 				self.run_program(inbox, [])
+
+class TestVarStartsWithKeyword(AbstractTests.TestValidProgram):
+	source_path = "misc/var-starts-with-keyword.hc"
+	exec_path = "misc/var-starts-with-keyword.hrm"
+
+	# This file reads six values from the inbox, then outputs the first value
+	def test_noop(self):
+		for inbox, expected_outbox in [
+				([1, 2, 3, 4, 5, 6], [1]),
+				([13, 11, 7, 5, 3, 2], [13]),
+				([*"IFFIER"], ["I"]),
+		]:
+			with self.subTest(self.input_to_name(inbox)):
+				self.run_program(inbox, expected_outbox)
+
