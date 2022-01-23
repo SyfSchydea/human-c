@@ -88,6 +88,13 @@ class AbstractTests:
 
 			self.assert_outbox(expected_outbox, outbox)
 
+		# Run a series of test cases on the compiled program
+		# test_cases should be an iterable of tuples of (inbox, expected_outbox)
+		def run_tests(self, test_cases):
+			for inbox, expected_outbox in test_cases:
+				with self.subTest(self.input_to_name(inbox)):
+					self.run_program(inbox, expected_outbox)
+
 		def input_to_name(self, inputs):
 			if len(inputs) == 0:
 				return "<empty>"
