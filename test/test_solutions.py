@@ -141,5 +141,27 @@ class TestYear9(AbstractTests.TestValidProgram):
 			([5, 0,  2, "E", 0, 0, -2, 9], [0] * 3),
 		])
 
+class TestYear10(AbstractTests.TestValidProgram):
+	source_path = "solutions/y10-octoplier-suite.hc"
+	floor_size = 5
+
+	def test_solution(self):
+		self.run_tests([
+			([3, -2, 6, 0], [24, -16, 48, 0]),
+			([5, -2, 6, 0], [40, -16, 48, 0]),
+			([6, -4, 1, 0], [48, -32,  8, 0]),
+			([6, -4, 6, 0], [48, -32, 48, 0]),
+		])
+
+	def test_extended(self):
+		self.run_tests([
+			([], []),
+			([0] * 4, [0] * 4),
+			([-1, 0, 1], [-8, 0, 8]),
+			([ 31,  81, 118,  37], [ 248,  648,  944,  296]),
+			([-36, -48, -28, -89], [-288, -384, -224, -712]),
+			([  8, -81, -53, -24], [  64, -648, -424, -192]),
+		])
+
 if __name__ == "__main__":
 	unittest.main()
