@@ -181,5 +181,25 @@ class TestYear11(AbstractTests.TestValidProgram):
 			([5, 3, 8, -9, 4, 5, -6, -6], [-2, 2, -17, 17, 1, -1, 0, 0]),
 		])
 
+class TestYear12(AbstractTests.TestValidProgram):
+	source_path = "solutions/y12-tetracontiplier.hc"
+	floor_size = 5
+
+	def test_solution(self):
+		self.run_tests([
+			([3, -7, 5, 0], [120, -280, 200, 0]),
+			([1, -1, 5, 0], [ 40,  -40, 200, 0]),
+			([5, -2, 7, 0], [200,  -80, 280, 0]),
+		])
+
+	def test_extended(self):
+		self.run_tests([
+			([], []),
+			([0] * 4, [0] * 4),
+			([ 22,  17,  23,   9], [ 880,  680,  920,  360]),
+			([-19, -17,  -1, -12], [-760, -680,  -40, -480]),
+			([  0,  10, -15,  16], [   0,  400, -600,  640]),
+		])
+
 if __name__ == "__main__":
 	unittest.main()
