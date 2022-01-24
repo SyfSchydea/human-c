@@ -115,5 +115,31 @@ class TestYear8(AbstractTests.TestValidProgram):
 			([-1, 0, 1], [-3, 0, 3]),
 		])
 
+class TestYear9(AbstractTests.TestValidProgram):
+	source_path = "solutions/y9-zero-preservation-initiative.hc"
+	floor_size = 9
+
+	def test_solution(self):
+		self.run_tests([
+			([8, 0, -1, "F", 0, 0,  3, 0], [0] * 4),
+			([5, 0,  2, "E", 0, 0, -2, 0], [0] * 4),
+			([8, 0,  0, "E", 0, 0,  4, 0], [0] * 5),
+			([5, 0,  5, "E", 0, 0,  0, 0], [0] * 5),
+			([3, 0,  0, "D", 0, 0,  0, 0], [0] * 6),
+		])
+
+	def test_extended(self):
+		self.run_tests([
+			([], []),
+			([0, 0, 0, 0], [0] * 4),
+			([1, 2, 3, 4], []),
+			([0, 0,  2, "E", 0, 0, -2, 0], [0] * 5),
+			([5, 9,  2, "E", 0, 0, -2, 0], [0] * 3),
+			([5, 0,  2,  0,  0, 0, -2, 0], [0] * 5),
+			([5, 0,  2, "E", 9, 0, -2, 0], [0] * 3),
+			([5, 0,  2, "E", 0, 9, -2, 0], [0] * 3),
+			([5, 0,  2, "E", 0, 0, -2, 9], [0] * 3),
+		])
+
 if __name__ == "__main__":
 	unittest.main()
