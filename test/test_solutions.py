@@ -163,5 +163,23 @@ class TestYear10(AbstractTests.TestValidProgram):
 			([  8, -81, -53, -24], [  64, -648, -424, -192]),
 		])
 
+class TestYear11(AbstractTests.TestValidProgram):
+	source_path = "solutions/y11-sub-hallway.hc"
+	floor_size = 3
+
+	def test_solution(self):
+		self.run_tests([
+			([3, 8, 7, 4, -8, -8, 4, -8], [5, -5, -3, 3, 0, 0, -12, 12]),
+			([3, 6, 6, 3, -8, -8, 3, -8], [3, -3, -3, 3, 0, 0, -11, 11]),
+			([1, 8, 6, 3, -2, -2, 8, -5], [7, -7, -3, 3, 0, 0, -13, 13]),
+		])
+
+	def test_extended(self):
+		self.run_tests([
+			([], []),
+			([0, 5, 99, 0], [5, -5, -99, 99]),
+			([5, 3, 8, -9, 4, 5, -6, -6], [-2, 2, -17, 17, 1, -1, 0, 0]),
+		])
+
 if __name__ == "__main__":
 	unittest.main()

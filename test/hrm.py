@@ -19,19 +19,28 @@ class Instruction:
 
 	# Checks that the worker's hands are not empty
 	# when an instruction expects to use the value
-	def emptyHandsCheck(self, office):
+	def empty_hands_check(self, office):
 		if office.hands is None:
 			raise BossError(
 					"Empty value! You\n"
 					f"can't {self.mnemonic} with\n"
 					"empty hands!\n")
 
-
 class ParameterisedInstruction(Instruction):
 	__slots__ = ["param"]
 
 	def __init__(self, param):
 		self.param = param
+
+	# Checks that the specified spot on the floor is not empty.
+	# Assumes that self.param is a floor address.
+	def empty_floor_check(self, office):
+		if office.floor[self.param] is None:
+			raise BossError(
+					f"Empty value! You can't {self.mnemonic}\n"
+					"with an empty tile on the\n"
+					"floor! Try writing something\n"
+					"to that tile first")
 
 	def __repr__(self):
 		return type(self).__name__ + "(" + repr(self.param) + ")"
@@ -46,7 +55,7 @@ class Outbox(Instruction):
 	mnemonic = "OUTBOX"
 
 	def execute(self, office):
-		self.emptyHandsCheck(office)
+		self.empty_hands_check(office)
 		office.outbox(office.hands)
 		office.hands = None
 
@@ -54,45 +63,56 @@ class CopyFrom(ParameterisedInstruction):
 	mnemonic = "COPYFROM"
 
 	def execute(self, office):
-		value = office.floor[self.param]
-		if value is None:
-			raise BossError("Empty value! You can't\n"
-					"COPYFROM with an empty\n"
-					"tile on the floor! Try writing\n"
-					"something to that tile first.\n")
+		self.empty_floor_check(office)
 
-		office.hands = value
+		office.hands = office.floor[self.param]
 
 class CopyTo(ParameterisedInstruction):
 	mnemonic = "COPYTO"
 
 	def execute(self, office):
-		self.emptyHandsCheck(office)
-		office.floor[self.param] = office.hands
+		self.empty_hands_check(office)
 
-ADD_LETTER_ERROR = (
-		"You can't ADD with a\n"
-		"letter! What would\n"
-		"that even mean?!")
+		office.floor[self.param] = office.hands
 
 class Add(ParameterisedInstruction):
 	mnemonic = "ADD"
 
 	def execute(self, office):
-		value = office.floor[self.param]
-		if value is None:
-			raise BossError("Empty value! You can't ADD\n"
-					"with an empty tile on the\n"
-					"floor! Try writing something\n"
-					"to that tile first")
-		if type(value) is str:
-			raise BossError(ADD_LETTER_ERROR)
+		self.empty_floor_check(office)
+		self.empty_hands_check(office)
 
-		self.emptyHandsCheck(office)
-		if type(office.hands) is str:
-			raise BossError(ADD_LETTER_ERROR)
+		value = office.floor[self.param]
+		if type(value) is str or type(office.hands) is str:
+			raise BossError(
+					"You can't ADD with a\n"
+					"letter! What would\n"
+					"that even mean?!")
 
 		office.hands += value
+
+class Sub(ParameterisedInstruction):
+	mnemonic = "SUB"
+
+	def execute(self, office):
+		self.empty_floor_check(office)
+		self.empty_hands_check(office)
+
+		subtrahend = office.floor[self.param]
+
+		if type(subtrahend) is int and type(office.hands) is int:
+			office.hands -= subtrahend
+
+		elif type(subtrahend) is str and type(office.hands) is str:
+			office.hands = ord(office.hands.upper()) - ord(subtrahend.upper())
+
+		else:
+			raise BossError(
+					"You can't SUB with mixed\n"
+					"operands! SUB'ing between one\n"
+					"letter and one number is invalid.\n"
+					"Only nice respectable pairs of two\n"
+					"letters or two numbers allowed.")
 
 class Jump(ParameterisedInstruction):
 	mnemonic = "JUMP"
@@ -105,7 +125,7 @@ class JumpZ(ParameterisedInstruction):
 	mnemonic = "JUMPZ"
 
 	def execute(self, office):
-		self.emptyHandsCheck(office)
+		self.empty_hands_check(office)
 		if office.hands == 0:
 			office.program_counter = self.param - 1
 
@@ -249,6 +269,8 @@ def load_program(path, initial_floor=[]):
 				program.append(CopyTo(validate_floor_addr(param, floor_size, lineno)))
 			elif instr == "ADD":
 				program.append(Add(validate_floor_addr(param, floor_size, lineno)))
+			elif instr == "SUB":
+				program.append(Sub(validate_floor_addr(param, floor_size, lineno)))
 			elif instr == "JUMP":
 				program.append(Jump(param))
 			elif instr == "JUMPZ":
