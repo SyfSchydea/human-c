@@ -246,7 +246,8 @@ def main():
 	result = parser.parse(program, tracking=True)
 	print(result)
 
-parser = yacc.yacc()
-
 if __name__ == "__main__":
+	parser = yacc.yacc()
 	main()
+else:
+	parser = yacc.yacc(debug=False)
