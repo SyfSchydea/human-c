@@ -2,7 +2,7 @@
 
 // For each two things in the
 // INBOX, add them together,
-// and pu the result in the
+// and put the result in the
 // OUTBOX.
 
 // You got a new command! It
