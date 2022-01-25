@@ -964,6 +964,14 @@ class AbstractInequalityOperator(AbstractBinaryOperator):
 		return hrmi.IfThenElseBlock(neg_cond_block,
 				then_block.last_block, else_block.last_block)
 
+	def eval_static(self, left, right):
+		val = left < right or (self.includes_zero and left == right)
+
+		if self.negative:
+			val = not val
+
+		return Boolean(val)
+
 	# Create an reversed version of this operation.
 	# Does not need to check for side effects of operands,
 	# as this should be handled by the calling function.
