@@ -86,20 +86,20 @@ def t_EQUALS(t):
 	r"="
 	return track(t)
 
-def t_LESS_THAN(t):
-	r"<"
-	return track(t)
-
 def t_LESS_THAN_OR_EQUAL(t):
 	r"<="
 	return track(t)
 
-def t_GREATER_THAN(t):
-	r">"
+def t_LESS_THAN(t):
+	r"<"
 	return track(t)
 
 def t_GREATER_THAN_OR_EQUAL(t):
 	r">="
+	return track(t)
+
+def t_GREATER_THAN(t):
+	r">"
 	return track(t)
 
 def t_AT(t):
