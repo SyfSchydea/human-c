@@ -201,5 +201,28 @@ class TestYear12(AbstractTests.TestValidProgram):
 			([  0,  10, -15,  16], [   0,  400, -600,  640]),
 		])
 
+class TestYear13(AbstractTests.TestValidProgram):
+	source_path = "solutions/y13-equalization-room.hc"
+	floor_size = 3
+
+	def test_solution(self):
+		self.run_tests([
+			([4, 6, 6, 6,  6,  5, -7, -7], [   6,    -7]),
+			([4, 5, 6, 6,  1,  4, -1, -1], [   6,    -1]),
+			([3, 3, 8, 8,  2, -2, -5, -5], [3, 8,    -5]),
+			([9, 1, 3, 3, -5, -5,  9,  9], [   3, -5, 9]),
+		])
+
+	def test_extended(self):
+		self.run_tests([
+			([                              ], [              ]),
+			([12, 12,  7,  1                ], [12            ]),
+			([12, 13,  6,  9,  1, 16, 13,  8], [              ]),
+			([ 7,  7, 12, 12, 14, 14, 14, 14], [ 7, 12, 14, 14]),
+			([ 6,  6, 15, 10,  7,  7,  5,  2], [ 6,      7    ]),
+			([ 0, 14, 12,  0,  0,  0        ], [         0    ]),
+			([ 8, -8, -1,  1                ], [              ]),
+		])
+
 if __name__ == "__main__":
 	unittest.main()
