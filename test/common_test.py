@@ -70,7 +70,10 @@ class AbstractTests:
 					self.fail("Bad outbox!\n"
 							"Management expected\n"
 							+ repr(expected[i])
-							+ f", but you outboxed {repr(actual[i])}.")
+							+ f", but you outboxed {repr(actual[i])}.\n"
+							"\n"
+							f"Expected: {repr(expected)}\n"
+							f"Actual:   {repr(actual)}")
 
 			# Fallback for missed inconsistencies
 			self.assertEqual(expected, actual)
