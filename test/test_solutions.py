@@ -224,5 +224,27 @@ class TestYear13(AbstractTests.TestValidProgram):
 			([ 8, -8, -1,  1                ], [              ]),
 		])
 
+class TestYear14(AbstractTests.TestValidProgram):
+	source_path = "solutions/y14-maximization-room.hc"
+	floor_size = 3
+
+	def test_solution(self):
+		self.run_tests([
+			([7, 7, -8, -9, 8, 8,  0,  8], [7, -8, 8,  8]),
+			([3, 6, -4, -4, 9, 9, -6, -2], [6, -4, 9, -2]),
+			([5, 2, -5, -4, 1, 1, -2,  3], [5, -4, 1,  3]),
+			([8, 1, -5, -6, 3, 3,  6,  4], [8, -5, 3,  6]),
+		])
+
+	def test_extended(self):
+		self.run_tests([
+			([], []),
+			([ 4, 13], [13]),
+			([ 4,  9,  3,  8], [9, 8]),
+			([14, 11,  3, 13, 20, 19], [14, 13, 20]),
+			([ 3,  3,  0,  9, 18, 15, 10,  8], [ 3,  9, 18, 10]),
+			([14,  4, 11,  4, 12, 13,  7, 12], [14, 11, 13, 12]),
+		])
+
 if __name__ == "__main__":
 	unittest.main()
