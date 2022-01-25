@@ -164,10 +164,21 @@ class LoadConstant(PseudoInstruction):
 		self.value = value
 
 	def simulate_hands(self, hands):
-		hands.add_constraint(ValueInHands(self.value))
+		hands.replace_constraints(ValueInHands(self.value))
 
 	def hands_redundant(self, hands_before):
 		return hands_before.has_constraint(ValueInHands(self.value))
+
+	def attempt_expand(self, hands):
+		if hands.has_constraint(ValueInHands(self.value)):
+			return []
+
+		if self.value == 0:
+			var_in_hands = hands.get_variable_in_hands()
+			if var_in_hands is not None:
+				return [Subtract(var_in_hands)]
+
+		return None
 
 	def __repr__(self):
 		return type(self).__name__ + "(" + repr(self.value) + ")"
@@ -531,6 +542,15 @@ class HandsState:
 
 	def clear_constraints(self):
 		self.constraints.clear()
+
+	# Fetch the name of a variable which is already in the processor's hands, or
+	# None if the hands do not match a variable.
+	def get_variable_in_hands(self):
+		for constraint in self.constraints:
+			if isinstance(constraint, VariableInHands):
+				return constraint.name
+
+		return None
 
 	def clone(self):
 		return HandsState(self.constraints)
