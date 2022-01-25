@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
+import sys
 import string
 
+from hcexceptions import HCTypeError, LexerError, HCParseError
 from hcast import generate_name
 import hrminstr as hrmi
 import hcparse2
@@ -264,7 +266,6 @@ def assign_memory(blocks, initial_memory):
 				inst.loc = get_addr(inst.loc)
 
 def main():
-	import sys
 	import argparse
 
 	parser = argparse.ArgumentParser(description="Compile .hc files")
@@ -273,28 +274,37 @@ def main():
 	args = parser.parse_args()
 
 	tree = None
-	if args.input is None:
-		tree = hcparse2.parse_file(sys.stdin)
-	else:
-		tree = hcparse2.parse_from_path(args.input)
+	try:
+		if args.input is None:
+			tree = hcparse2.parse_file(sys.stdin)
+		else:
+			tree = hcparse2.parse_from_path(args.input)
+	except (LexerError, HCParseError) as e:
+		print(e, file=sys.stderr)
+		return 1
 
-	initial_memory_map = tree.get_memory_map()
-	namespace = tree.get_namespace()
-	tree.validate_structure(namespace)
+	try:
+		initial_memory_map = tree.get_memory_map()
+		namespace = tree.get_namespace()
+		tree.validate_structure(namespace)
 
-	tree.create_blocks()
-	end_block = hrmi.Block()
-	tree.last_block.assign_next(end_block)
+		tree.create_blocks()
+		end_block = hrmi.Block()
+		tree.last_block.assign_next(end_block)
 
-	blocks = extract_blocks(tree)
+		blocks = extract_blocks(tree)
 
-	# Ensure end block is at the end, if it's still present
-	if end_block in blocks:
-		blocks.remove(end_block)
-		blocks.append(end_block)
+		# Ensure end block is at the end, if it's still present
+		if end_block in blocks:
+			blocks.remove(end_block)
+			blocks.append(end_block)
 
-	optimise_hands_tracking(blocks)
-	record_variable_use(blocks, initial_memory_map)
+		optimise_hands_tracking(blocks)
+		record_variable_use(blocks, initial_memory_map)
+	except HCTypeError as e:
+		print(e, file=sys.stderr)
+		return 1
+
 	optimise_variable_needs(blocks, initial_memory_map)
 
 	collapse_redundant_blocks(blocks)
@@ -310,6 +320,8 @@ def main():
 		asm = block.to_asm()
 		if len(asm) > 0:
 			print(asm)
-	
+
+	return 0
+
 if __name__ == "__main__":
-	main()
+	sys.exit(main())

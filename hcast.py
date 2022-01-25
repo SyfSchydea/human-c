@@ -3,9 +3,7 @@ import math
 from dataclasses import dataclass
 
 import hrminstr as hrmi
-
-class HCTypeError(Exception):
-	pass
+from hcexceptions import HCTypeError
 
 class HCInternalError(Exception):
 	pass
@@ -60,12 +58,15 @@ validate_expr            = get_validate_func("validate")
 
 class AbstractLine:
 	__slots__ = [
+		"block",
+
 		"indent",
-		"block"
+		"lineno",
 	]
 
-	def __init__(self, indent=""):
+	def __init__(self, indent="", lineno=None):
 		self.indent = indent
+		self.lineno = lineno
 
 	# Get list of memory values and variable assigned by this statement
 	# Defaults to returning an empty tuple, since most statements don't add any
@@ -82,29 +83,6 @@ class AbstractLine:
 	def get_namespace(self):
 		raise NotImplementedError("AbstractLine.get_namespace", self)
 
-# eg: let x
-class Declare(AbstractLine):
-	__slots__ = ["name"]
-
-	def create_block(self):
-		# Empty block
-		self.block = hrmi.Block()
-
-	def __init__(self, name, indent=""):
-		super().__init__(indent)
-		self.name = name
-
-	def get_namespace(self):
-		return Namespace(self.name)
-
-	def validate(self, namespace):
-		return None
-
-	def __repr__(self):
-		return ("Declare("
-			+ repr(self.name) + ", "
-			+ repr(self.indent) + ")")
-
 # eg: init Zero @ 10
 class InitialValueDeclaration(AbstractLine):
 	__slots__ = [
@@ -114,7 +92,7 @@ class InitialValueDeclaration(AbstractLine):
 
 	def create_block(self):
 		# Empty block
-		self.block = hrmi.Block()
+		self.block = hrmi.Block(self.lineno)
 	
 	def get_memory_map(self):
 		return (MemoryLocation(self.name, self.loc),)
@@ -180,9 +158,11 @@ class StatementList:
 			new_memory = stmt.get_memory_map()
 			for mem in new_memory:
 				if mem.name in memory_by_name:
-					raise HCTypeError(f"Variable {mem.name} declared twice")
+					raise HCTypeError(f"Variable '{mem.name}' declared twice "
+							f"on line {stmt.lineno}")
 				if mem.loc in memory_by_loc:
-					raise HCTypeError(f"Multiple variables declared at {mem.loc}")
+					raise HCTypeError(f"Multiple variables declared at floor "
+							f"address {mem.loc} on line {stmt.lineno}")
 
 				memory_by_name[mem.name] = mem
 				memory_by_loc[mem.loc] = mem
@@ -292,7 +272,7 @@ class If(AbstractLine):
 		self.else_block.create_blocks()
 
 		self.block = self.condition.create_branch_block(
-				self.then_block, self.else_block)
+				self.then_block, self.else_block, self.lineno)
 
 	def get_namespace(self):
 		ns = self.condition.get_namespace()
@@ -347,7 +327,7 @@ class Output(AbstractLineWithExpr):
 	__slots__ = ["expr"]
 
 	def create_block(self):
-		self.block = hrmi.Block()
+		self.block = hrmi.Block(self.lineno)
 		self.expr.add_to_block(self.block)
 		self.block.add_instruction(hrmi.Output())
 
@@ -358,7 +338,7 @@ class Output(AbstractLineWithExpr):
 
 class ExprLine(AbstractLineWithExpr):
 	def create_block(self):
-		self.block = hrmi.Block()
+		self.block = hrmi.Block(self.lineno)
 		self.expr.add_to_block(self.block)
 
 	def __repr__(self):
@@ -465,7 +445,7 @@ class Boolean(AbstractExpr):
 	def __init__(self, value):
 		self.value = value
 
-	def create_branch_block(self, then_block, else_block):
+	def create_branch_block(self, then_block, else_block, lineno=None):
 		block = then_block if self.value else else_block
 		return hrmi.CompoundBlock(block.first_block, [block.last_block])
 
@@ -899,7 +879,7 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 	# Create a Compound condition block which branches to one block
 	# if it passes the condition, or another if it fails.
 	# then_block and else_block are both CompoundBlock objects
-	def create_branch_block(self, then_block, else_block):
+	def create_branch_block(self, then_block, else_block, lineno):
 		if not is_zero(self.right):
 			raise HCInternalError("Unable to directly compare "
 					+ "to non-zero values", self)
@@ -907,7 +887,7 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 		if self.negate:
 			then_block, else_block = else_block, then_block
 
-		cond_block = hrmi.Block()
+		cond_block = hrmi.Block(lineno)
 		self.left.add_to_block(cond_block)
 		cond_block.assign_jz(then_block.first_block)
 		cond_block.assign_next(else_block.first_block)
@@ -960,7 +940,7 @@ class AbstractInequalityOperator(AbstractBinaryOperator):
 	# Create a Compound condition block which branches to one block
 	# if it passes the condition, or another if it fails.
 	# then_block and else_block are both CompoundBlock objects
-	def create_branch_block(self, then_block, else_block):
+	def create_branch_block(self, then_block, else_block, lineno):
 		if not is_zero(self.right):
 			raise HCInternalError("Unable to directly compare "
 					+ "against a value other than zero", self)
@@ -968,12 +948,12 @@ class AbstractInequalityOperator(AbstractBinaryOperator):
 		if self.negative:
 			then_block, else_block = else_block, then_block
 
-		neg_cond_block = hrmi.Block()
+		neg_cond_block = hrmi.Block(lineno)
 		self.left.add_to_block(neg_cond_block)
 		neg_cond_block.assign_jn(then_block.first_block)
 
 		if self.includes_zero:
-			zero_cond_block = hrmi.Block()
+			zero_cond_block = hrmi.Block(lineno)
 			zero_cond_block.assign_jz(then_block.first_block)
 			zero_cond_block.assign_next(else_block.first_block)
 
