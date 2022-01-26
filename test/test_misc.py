@@ -119,3 +119,7 @@ class TestBrackets(AbstractTests.TestValidProgram):
 			([ 0, 18, 6, 10, 7, 12], [ 36, 32, 38]),
 			([-9,  0, 9,  0, 0,  0], [-18, 18,  0]),
 		])
+
+class TestConstNot(AbstractTests.TestEcho):
+	# Tests constant evaluation of logical not
+	source_path = "misc/const-not.hc"
