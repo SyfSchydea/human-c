@@ -29,7 +29,7 @@ def generate_name(idx):
 def get_validate_func(method_name):
 	def validate_func(expr, namespace):
 		if not hasattr(expr, method_name):
-			raise HCTypeError("Expression cannot be validated", expr)
+			raise HCInternalError("Expression cannot be validated", expr)
 		
 		new_expr, injected_stmts = getattr(expr, method_name)(namespace)
 
