@@ -241,20 +241,14 @@ def load_program(path, initial_floor=[]):
 
 		for line in f:
 			lineno += 1
-			line = line.strip()
 
-			if line == "":
-				continue
+			line = line.rstrip("\n")
 
-			if line == "-- HUMAN RESOURCE MACHINE PROGRAM --":
-				break
+			# Remove comments
+			match = re.fullmatch(r"(.*?)--.*", line)
+			if match:
+				line = match[1]
 
-			raise BossError(BOSS_PASTE_ERROR
-					+ "Program should start with:\n"
-					"'-- HUMAN RESOURCE MACHINE PROGRAM --'\n")
-
-		for line in f:
-			lineno += 1
 			line = line.strip()
 
 			match = re.match(r"([a-zA-Z\d]+)\s*:\s*(.*)$", line)
