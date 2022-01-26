@@ -79,3 +79,11 @@ class TestConstLt(AbstractTests.TestEcho):
 class TestConstGt(AbstractTests.TestEcho):
 	# Tests constant evaluation of the greater than operator
 	source_path = "misc/const-gt.hc"
+
+class TestConstLe(AbstractTests.TestTriple):
+	# Tests constant evaluation of the less than or equal to operator
+	source_path = "misc/const-le.hc"
+
+class TestConstGe(AbstractTests.TestTriple):
+	# Tests constant evaluation of the less than or equal to operator
+	source_path = "misc/const-ge.hc"
