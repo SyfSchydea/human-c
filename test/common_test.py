@@ -109,6 +109,8 @@ class AbstractTests:
 	# Perform tests on a program which should act as an echo.
 	# Expects all values in the inbox to be copied to the outbox.
 	class TestEcho(TestValidProgram):
+		floor_size = 16
+
 		def test_echo(self):
 			for inbox in [
 				[],

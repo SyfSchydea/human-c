@@ -71,3 +71,7 @@ class TestAddMulPrecedence(AbstractTests.TestValidProgram):
 class TestConstSub(AbstractTests.TestEcho):
 	# Tests constant evaluation of the subtraction operator
 	source_path = "misc/const-sub.hc"
+
+class TestConstLt(AbstractTests.TestEcho):
+	# Tests constant evaluation of the subtraction operator
+	source_path = "misc/const-lt.hc"
