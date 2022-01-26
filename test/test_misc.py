@@ -140,3 +140,24 @@ class TestLogicalNot(AbstractTests.TestValidProgram):
 			([13,  3, 10,  5,  9, 3,  5, 13], [13,  3, 10,  5,  9, 3, 5, 13]),
 			([19, 19,  3,  3,  1, 1, 10, 10], []),
 		])
+
+class TestLogicalAnd(AbstractTests.TestValidProgram):
+	source_path = "misc/logical-and.hc"
+	floor_size = 16
+
+	# This file tests compilation of logical and.
+	# It should read pairs of values from the inbox, and send them to the outbox
+	# only if they are both positive.
+	def test_output(self):
+		self.run_tests([
+			([], []),
+			([  1, -11], []),
+			([ -2,  11,  -7,  7], []),
+			([  3,  -4,   2, 13,  -9, -14], [2, 13]),
+			([-12,  11, -11, -1,  14, -14, -8,   7], []),
+			([ -3,  -9,  13, -3, -13,  10, -4, -21], []),
+			([  7,   0,   0,  5,   1,  17,  1, -12], [1, 17]),
+			([  0,   0,   6,  0,   4,   0,  3,  10], [3, 10]),
+			([ 10,   5,   8, 13,  10,   9,  3,  10],
+					[10, 5, 8, 13, 10, 9, 3, 10]),
+		])
