@@ -1033,6 +1033,9 @@ class LogicalNot(AbstractExpr):
 		return (type(self).__name__ + "("
 			+ repr(self.operand) + ")")
 
+class LogicalAnd(AbstractBinaryOperator):
+	pass
+
 # Collection of names used in a part or whole of the program
 class Namespace:
 	__slots__ = [
