@@ -104,3 +104,18 @@ class TestUnaryMinus(AbstractTests.TestValidProgram):
 			([-6, 10, 11], [6, -6, -10, 10, -11, 11]),
 			([-4, -3,  9, -8], [4, -4, 3, -3, -9, 9, 8, -8]),
 		])
+
+class TestBrackets(AbstractTests.TestValidProgram):
+	source_path = "misc/brackets.hc"
+	floor_size = 16
+
+	# Tests use of brackets in expressions.
+	# Should take 2 values from the input then output double their sum.
+	def test_output(self):
+		self.run_tests([
+			([], []),
+			([ 2,  3], [10]),
+			([20, -4, -4, 2], [32, -4]),
+			([ 0, 18, 6, 10, 7, 12], [ 36, 32, 38]),
+			([-9,  0, 9,  0, 0,  0], [-18, 18,  0]),
+		])
