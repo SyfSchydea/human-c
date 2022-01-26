@@ -32,6 +32,8 @@ tokens = (
 	"ADD",
 	"SUBTRACT",
 	"MULTIPLY",
+	"OPEN_BRACKET",
+	"CLOSE_BRACKET",
 
 	*keywords.values(),
 )
@@ -116,6 +118,14 @@ def t_SUBTRACT(t):
 
 def t_MULTIPLY(t):
 	r"\*"
+	return track(t)
+
+def t_OPEN_BRACKET(t):
+	r"\("
+	return track(t)
+
+def t_CLOSE_BRACKET(t):
+	r"\)"
 	return track(t)
 
 def t_error(t):
