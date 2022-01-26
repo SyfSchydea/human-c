@@ -221,15 +221,6 @@ def p_var(p):
 	"expr_v : name"
 	p[0] = ast.VariableRef(p[1])
 
-precedence = (
-	("left",  "DBL_EQUALS", "NOT_EQUALS"),
-	("left",  "LESS_THAN", "LESS_THAN_OR_EQUAL",
-			"GREATER_THAN", "GREATER_THAN_OR_EQUAL"),
-	("right", "EQUALS"),
-	("left",  "ADD", "SUBTRACT"),
-	("left",  "MULTIPLY"),
-)
-
 def p_error(p):
 	if not p:
 		raise HCParseError("Syntax error at eof")
