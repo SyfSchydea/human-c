@@ -87,3 +87,20 @@ class TestConstLe(AbstractTests.TestTriple):
 class TestConstGe(AbstractTests.TestTriple):
 	# Tests constant evaluation of the less than or equal to operator
 	source_path = "misc/const-ge.hc"
+
+class TestUnaryMinus(AbstractTests.TestValidProgram):
+	source_path = "misc/unary-minus.hc"
+	floor_size = 16
+
+	# Tests the unary minus operator.
+	# Should output the negative of each value
+	# in the input then the original value.
+	def test_output(self):
+		self.run_tests([
+			([], []),
+			([ 0], [0, 0]),
+			([ 2, -3], [-2, 2,   3, -3]),
+			([ 1, 21], [-1, 1, -21, 21]),
+			([-6, 10, 11], [6, -6, -10, 10, -11, 11]),
+			([-4, -3,  9, -8], [4, -4, 3, -3, -9, 9, 8, -8]),
+		])
