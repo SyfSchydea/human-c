@@ -123,3 +123,20 @@ class TestBrackets(AbstractTests.TestValidProgram):
 class TestConstNot(AbstractTests.TestEcho):
 	# Tests constant evaluation of logical not
 	source_path = "misc/const-not.hc"
+
+class TestLogicalNot(AbstractTests.TestValidProgram):
+	source_path = "misc/logical-not.hc"
+	floor_size = 16
+
+	# This file tests evaluation of logical not.
+	# It should read pairs of values, and output them only if they are not equal
+	def test_output(self):
+		self.run_tests([
+			([], []),
+			([10, 14],                        [10, 14]),
+			([21, 14,  7,  7],                [21, 14]),
+			([ 5,  8, 12,  7,  1, 1],         [ 5,  8, 12,  7]),
+			([17, 17,  1, 13, 10, 4, 10, 10], [         1, 13, 10, 4]),
+			([13,  3, 10,  5,  9, 3,  5, 13], [13,  3, 10,  5,  9, 3, 5, 13]),
+			([19, 19,  3,  3,  1, 1, 10, 10], []),
+		])
