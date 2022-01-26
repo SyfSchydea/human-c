@@ -1026,6 +1026,9 @@ class LogicalNot(AbstractExpr):
 
 		return (None, injected_stmts)
 
+	def create_branch_block(self, then_block, else_block, lineno=None):
+		return self.operand.create_branch_block(else_block, then_block, lineno)
+
 	def __repr__(self):
 		return (type(self).__name__ + "("
 			+ repr(self.operand) + ")")
