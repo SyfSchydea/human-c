@@ -73,5 +73,9 @@ class TestConstSub(AbstractTests.TestEcho):
 	source_path = "misc/const-sub.hc"
 
 class TestConstLt(AbstractTests.TestEcho):
-	# Tests constant evaluation of the subtraction operator
+	# Tests constant evaluation of the less than operator
 	source_path = "misc/const-lt.hc"
+
+class TestConstGt(AbstractTests.TestEcho):
+	# Tests constant evaluation of the greater than operator
+	source_path = "misc/const-gt.hc"
