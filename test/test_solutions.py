@@ -271,5 +271,22 @@ class TestYear16(AbstractTests.TestValidProgram):
 			([ 0,   0,   0, -13,   0,   0,   0], [0,  0, 0, 13,  0, 0,  0]),
 		])
 
+class TestYear17(AbstractTests.TestValidProgram):
+	source_path = "solutions/y17-exclusive-lounge.hc"
+
+	initial_memory = [
+		None, None,
+		None, None,
+		0,    1,
+	]
+
+	def test_solution(self):
+		self.run_tests([
+			([-6,  1, -8,  2, -1,  5,  1, -4], [1, 1, 1, 1]),
+			([ 7, -5, -1, -1,  7, -2,  1,  7], [1, 0, 1, 0]),
+			([ 7,  2, -9, -4,  9,  9, -1, -2], [0, 0, 0, 0]),
+			([ 5,  3,  4, -4, -9,  6, -9, -7], [0, 1, 1, 0]),
+		])
+
 if __name__ == "__main__":
 	unittest.main()
