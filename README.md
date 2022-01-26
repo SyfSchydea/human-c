@@ -6,3 +6,7 @@ assembly language.
 
 The compiler is written is Python 3.8, and requires
 [ply](https://pypi.org/project/ply/) to run.
+
+Despite the name, the syntax of Human C more closely resembles Python than C.
+See the [test/source/solutions](test/source/solutions) directory for example
+code.
