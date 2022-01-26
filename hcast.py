@@ -1018,6 +1018,14 @@ class LogicalNot(AbstractExpr):
 	def get_namespace(self):
 		return self.operand.get_namespace()
 
+	def validate_branchable(self, namespace):
+		self.operand, injected_stmts = validate_expr_branchable(self.operand, namespace)
+
+		if isinstance(self.operand, Boolean):
+			return (Boolean(not self.operand.value), None)
+
+		return (None, injected_stmts)
+
 	def __repr__(self):
 		return (type(self).__name__ + "("
 			+ repr(self.operand) + ")")
