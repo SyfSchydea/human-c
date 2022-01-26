@@ -211,6 +211,9 @@ class StatementList:
 
 		return self.stmts[-1]
 
+	def get_exit_blocks(self):
+		return self.last_block.get_exit_blocks()
+
 	def __init__(self, stmts=None):
 		self.stmts = stmts
 		if self.stmts is None:
@@ -447,7 +450,7 @@ class Boolean(AbstractExpr):
 
 	def create_branch_block(self, then_block, else_block, lineno=None):
 		block = then_block if self.value else else_block
-		return hrmi.CompoundBlock(block.first_block, [block.last_block])
+		return hrmi.CompoundBlock(block.first_block, block.get_exit_blocks())
 
 	def __repr__(self):
 		return ("Boolean("
@@ -891,8 +894,8 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 		cond_block.assign_jz(then_block.first_block)
 		cond_block.assign_next(else_block.first_block)
 
-		return hrmi.IfThenElseBlock(cond_block,
-				then_block.last_block, else_block.last_block)
+		return hrmi.CompoundBlock(cond_block,
+				[*then_block.get_exit_blocks(), *else_block.get_exit_blocks()])
 
 class CompareEq(AbstractEqualityOperator):
 	pass
@@ -959,8 +962,8 @@ class AbstractInequalityOperator(AbstractBinaryOperator):
 		else:
 			neg_cond_block.assign_next(else_block.first_block)
 
-		return hrmi.IfThenElseBlock(neg_cond_block,
-				then_block.last_block, else_block.last_block)
+		return hrmi.CompoundBlock(neg_cond_block,
+				[*then_block.get_exit_blocks(), *else_block.get_exit_blocks()])
 
 	def eval_static(self, left, right):
 		val = left < right or (self.includes_zero and left == right)
@@ -1034,7 +1037,30 @@ class LogicalNot(AbstractExpr):
 			+ repr(self.operand) + ")")
 
 class LogicalAnd(AbstractBinaryOperator):
-	pass
+	def validate_branchable(self, namespace):
+		self.left, injected_stmts = validate_expr_branchable(
+				self.left, namespace)
+		self.right, injected_stmts_right = validate_expr_branchable(
+				self.right, namespace)
+
+		# The right-hand side of the operator should only be evaluated if the
+		# left-hand side evaluates to true. Therefore if the right-hand side
+		# requires injected statements to evaluate, they cannot be simply
+		# injected before the current statement unconditionally. There is no
+		# support yet to allow these statements to be evaluated correctly.
+		if len(injected_stmts_right) > 0:
+			raise HCInternalError("Cannot validate logical and statements "
+					"which require injected statements on the right-hand side")
+
+		return (None, injected_stmts)
+
+	def create_branch_block(self, then_block, else_block, lineno):
+		right_block = self.right.create_branch_block(
+				then_block, else_block, lineno)
+		left_block = self.left.create_branch_block(
+				right_block, else_block, lineno)
+
+		return left_block
 
 # Collection of names used in a part or whole of the program
 class Namespace:
