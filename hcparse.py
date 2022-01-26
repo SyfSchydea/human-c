@@ -85,6 +85,14 @@ def p_operator_multiply(p):
 	"multiply : MULTIPLY optws"
 	pass
 
+def p_open_bracket(p):
+	"open_bracket : OPEN_BRACKET optws"
+	pass
+
+def p_close_bracket(p):
+	"close_bracket : CLOSE_BRACKET optws"
+	pass
+
 def p_operator_eq(p):
 	"cmp_eq : DBL_EQUALS optws"
 	pass
@@ -220,6 +228,10 @@ def p_num(p):
 def p_var(p):
 	"expr_v : name"
 	p[0] = ast.VariableRef(p[1])
+
+def p_brackets(p):
+	"expr_v : open_bracket expr close_bracket"
+	p[0] = p[2]
 
 def p_error(p):
 	if not p:
