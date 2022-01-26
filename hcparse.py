@@ -117,6 +117,10 @@ def p_operator_ge(p):
 	"cmp_ge : GREATER_THAN_OR_EQUAL optws"
 	pass
 
+def p_operator_not(p):
+	"not : BANG optws"
+	pass
+
 def p_identifier(p):
 	"name : IDENTIFIER optws"
 	p[0] = p[1]
@@ -212,6 +216,10 @@ def p_mul(p):
 def p_unary_minus(p):
 	"expr_unary : subtract expr_unary"
 	p[0] = ast.Subtract(ast.Number(0), p[2])
+
+def p_logical_not(p):
+	"expr_unary : not expr_unary"
+	p[0] = ast.LogicalNot(p[2])
 
 def p_expr_v(p):
 	"expr_unary : expr_v"

@@ -34,6 +34,7 @@ tokens = (
 	"MULTIPLY",
 	"OPEN_BRACKET",
 	"CLOSE_BRACKET",
+	"BANG",
 
 	*keywords.values(),
 )
@@ -86,6 +87,10 @@ def t_NOT_EQUALS(t):
 
 def t_EQUALS(t):
 	r"="
+	return track(t)
+
+def t_BANG(t):
+	r"!"
 	return track(t)
 
 def t_LESS_THAN_OR_EQUAL(t):
