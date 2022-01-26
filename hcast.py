@@ -614,7 +614,6 @@ class Subtract(AbstractAdditiveOperator):
 	def eval_static(self, left, right):
 		return Number(left - right)
 
-
 # Pseudo operator.
 # Like subtraction, but may represent either (x - y) or (y - x) in cases
 # where either is correct, but one may be more efficient than the other.
@@ -1004,6 +1003,24 @@ class CompareGe(AbstractInequalityOperator):
 
 	def swap_operands(self):
 		return CompareLe(self.right, self.left)
+
+class LogicalNot(AbstractExpr):
+	__slots = (
+		"operand",
+	)
+
+	def __init__(self, operand):
+		self.operand = operand
+
+	def has_side_effects(self):
+		return self.operand.has_side_effects()
+
+	def get_namespace(self):
+		return self.operand.get_namespace()
+
+	def __repr__(self):
+		return (type(self).__name__ + "("
+			+ repr(self.operand) + ")")
 
 # Collection of names used in a part or whole of the program
 class Namespace:
