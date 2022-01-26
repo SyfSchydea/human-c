@@ -917,8 +917,7 @@ class AbstractInequalityOperator(AbstractBinaryOperator):
 		injected_stmts.extend(injected_stmts_rt)
 
 		if isinstance(self.left, Number) and isinstance(self.right, Number):
-			value = Boolean(self.eval_static(
-					self.left.value, self.right.value))
+			value = self.eval_static(self.left.value, self.right.value)
 			return (value, injected_stmts)
 
 		if is_zero(self.right):

@@ -68,6 +68,26 @@ class TestAddMulPrecedence(AbstractTests.TestValidProgram):
 			([12, -36, -8, 24], [0, 0]),
 		])
 
+class TestConstSub(AbstractTests.TestEcho):
+	# Tests constant evaluation of the subtraction operator
+	source_path = "misc/const-sub.hc"
+
+class TestConstLt(AbstractTests.TestEcho):
+	# Tests constant evaluation of the less than operator
+	source_path = "misc/const-lt.hc"
+
+class TestConstGt(AbstractTests.TestEcho):
+	# Tests constant evaluation of the greater than operator
+	source_path = "misc/const-gt.hc"
+
+class TestConstLe(AbstractTests.TestTriple):
+	# Tests constant evaluation of the less than or equal to operator
+	source_path = "misc/const-le.hc"
+
+class TestConstGe(AbstractTests.TestTriple):
+	# Tests constant evaluation of the less than or equal to operator
+	source_path = "misc/const-ge.hc"
+
 class TestUnaryMinus(AbstractTests.TestValidProgram):
 	source_path = "misc/unary-minus.hc"
 	floor_size = 16
