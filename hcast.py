@@ -1056,6 +1056,9 @@ class LogicalAnd(AbstractBinaryOperator):
 
 		return left_block
 
+class LogicalAnd(AbstractBinaryOperator):
+	pass
+
 # Allows for statements to be evaluated in the middle of an expression.
 # Similar to C's ({ ... }) syntax.
 class InlineStatementExpr(AbstractExpr):
