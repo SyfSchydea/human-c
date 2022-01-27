@@ -80,13 +80,15 @@ class TestConstGt(AbstractTests.TestEcho):
 	# Tests constant evaluation of the greater than operator
 	source_path = "misc/const-gt.hc"
 
-class TestConstLe(AbstractTests.TestTriple):
+class TestConstLe(AbstractTests.TestMultiply):
 	# Tests constant evaluation of the less than or equal to operator
 	source_path = "misc/const-le.hc"
+	factor = 3
 
-class TestConstGe(AbstractTests.TestTriple):
+class TestConstGe(AbstractTests.TestMultiply):
 	# Tests constant evaluation of the less than or equal to operator
 	source_path = "misc/const-ge.hc"
+	factor = 3
 
 class TestUnaryMinus(AbstractTests.TestValidProgram):
 	source_path = "misc/unary-minus.hc"
@@ -219,20 +221,67 @@ class TestLogicalOr(AbstractTests.TestValidProgram):
 			 [ 10,   5,   8, 13,  10,   9,  3,  10]),
 		])
 
-class TestConstOr(AbstractTests.TestValidProgram):
-	source_path = "misc/const-or.hc"
-	floor_size = 16
-
+class TestConstOr(AbstractTests.TestMultiply):
 	# This file tests static evaluation of the logical or operator.
 	# It should output each value in the input multiplied by 10.
+	source_path = "misc/const-or.hc"
+	factor = 10
+
+class TestLogicalXor(AbstractTests.TestValidProgram):
+	source_path = "misc/logical-xor.hc"
+	floor_size = 16
+
+	# This file tests use of the not equals operator as logical xor.
+	# The file should read pairs of values from the inbox, then output them both
+	# only if exactly one is positive.
 	def test_output(self):
 		self.run_tests([
 			([], []),
-			([ 11], [110]),
-			([  7, -4], [70, -40]),
-			([ 11,  9, -3], [110, 90, -30]),
-			([-13,  7,  1, -1], [-130, 70, 10, -10]),
-			([ 16,  4, 18, -6, 5], [160, 40, 180, -60, 50]),
-			([ 12,  1, -2, -7, 3, 2], [120, 10, -20, -70, 30, 20]),
-			([  0,  0,  0,  0], [0, 0, 0, 0]),
+			([  1, -11], [1, -11]),
+			([ -2,  11,  -7,  7], [-2, 11, -7, 7]),
+			([  3,  -4,   2, 13,  -9, -14], [3, -4]),
+			([-12,  11, -11, -1,  14, -14, -8,   7],
+			 [-12,  11,           14, -14, -8,   7]),
+			([ -3,  -9,  13, -3, -13,  10, -4, -21],
+			 [           13, -3, -13,  10]),
+			([  7,   0,   0,  5,   1,  17,  1, -12],
+			 [  7,   0,   0,  5,            1, -12]),
+			([  0,   0,   6,  0,   4,   0,  3,  10],
+			 [            6,  0,   4,   0]),
+			([ 10,   5,   8, 13,  10,   9,  3,  10], []),
 		])
+
+class TestLogicalXnor(AbstractTests.TestValidProgram):
+	source_path = "misc/logical-xnor.hc"
+	floor_size = 16
+
+	# This file tests use of the equals operator as logical xnor.
+	# The file should read pairs of values from the inbox, then output them both
+	# only if either both or neither are non-negative.
+	def test_output(self):
+		self.run_tests([
+			([], []),
+			([  1, -11], []),
+			([ -2,  11,  -7,  7], []),
+			([  3,  -4,   2, 13,  -9, -14], [2, 13, -9, -14]),
+			([-12,  11, -11, -1,  14, -14, -8,   7],
+			 [          -11, -1,                  ]),
+			([ -3,  -9,  13, -3, -13,  10, -4, -21],
+			 [ -3,  -9,                    -4, -21]),
+			([  7,   0,   0,  5,   1,  17,  1, -12],
+			 [  7,   0,   0,  5,   1,  17]),
+			([  0,   0,   6,  0,   4,   0,  3,  10],
+			 [  0,   0,   6,  0,   4,   0,  3,  10]),
+			([ 10,   5,   8, 13,  10,   9,  3,  10],
+			 [ 10,   5,   8, 13,  10,   9,  3,  10]),
+			([  0,   0,  -7,  0,   0,  -3, -5, -11],
+			 [  0,   0,                    -5, -11]),
+		])
+
+class TestConstXor(AbstractTests.TestMultiply):
+	source_path = "misc/const-xor.hc"
+	factor = 2
+
+class TestConstXnor(AbstractTests.TestMultiply):
+	source_path = "misc/const-xnor.hc"
+	factor = 2
