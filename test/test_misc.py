@@ -80,13 +80,15 @@ class TestConstGt(AbstractTests.TestEcho):
 	# Tests constant evaluation of the greater than operator
 	source_path = "misc/const-gt.hc"
 
-class TestConstLe(AbstractTests.TestTriple):
+class TestConstLe(AbstractTests.TestMultiply):
 	# Tests constant evaluation of the less than or equal to operator
 	source_path = "misc/const-le.hc"
+	factor = 3
 
-class TestConstGe(AbstractTests.TestTriple):
+class TestConstGe(AbstractTests.TestMultiply):
 	# Tests constant evaluation of the less than or equal to operator
 	source_path = "misc/const-ge.hc"
+	factor = 3
 
 class TestUnaryMinus(AbstractTests.TestValidProgram):
 	source_path = "misc/unary-minus.hc"
@@ -219,23 +221,11 @@ class TestLogicalOr(AbstractTests.TestValidProgram):
 			 [ 10,   5,   8, 13,  10,   9,  3,  10]),
 		])
 
-class TestConstOr(AbstractTests.TestValidProgram):
-	source_path = "misc/const-or.hc"
-	floor_size = 16
-
+class TestConstOr(AbstractTests.TestMultiply):
 	# This file tests static evaluation of the logical or operator.
 	# It should output each value in the input multiplied by 10.
-	def test_output(self):
-		self.run_tests([
-			([], []),
-			([ 11], [110]),
-			([  7, -4], [70, -40]),
-			([ 11,  9, -3], [110, 90, -30]),
-			([-13,  7,  1, -1], [-130, 70, 10, -10]),
-			([ 16,  4, 18, -6, 5], [160, 40, 180, -60, 50]),
-			([ 12,  1, -2, -7, 3, 2], [120, 10, -20, -70, 30, 20]),
-			([  0,  0,  0,  0], [0, 0, 0, 0]),
-		])
+	source_path = "misc/const-or.hc"
+	factor = 10
 
 class TestLogicalXor(AbstractTests.TestValidProgram):
 	source_path = "misc/logical-xor.hc"
@@ -287,3 +277,7 @@ class TestLogicalXnor(AbstractTests.TestValidProgram):
 			([  0,   0,  -7,  0,   0,  -3, -5, -11],
 			 [  0,   0,                    -5, -11]),
 		])
+
+class TestConstXor(AbstractTests.TestMultiply):
+	source_path = "misc/const-xor.hc"
+	factor = 2
