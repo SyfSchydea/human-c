@@ -211,6 +211,9 @@ class StatementList:
 
 		return self.stmts[-1]
 
+	def get_exit_blocks(self):
+		return self.last_block.get_exit_blocks()
+
 	def __init__(self, stmts=None):
 		self.stmts = stmts
 		if self.stmts is None:
@@ -447,7 +450,7 @@ class Boolean(AbstractExpr):
 
 	def create_branch_block(self, then_block, else_block, lineno=None):
 		block = then_block if self.value else else_block
-		return hrmi.CompoundBlock(block.first_block, [block.last_block])
+		return hrmi.CompoundBlock(block.first_block, block.get_exit_blocks())
 
 	def __repr__(self):
 		return ("Boolean("
@@ -891,8 +894,8 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 		cond_block.assign_jz(then_block.first_block)
 		cond_block.assign_next(else_block.first_block)
 
-		return hrmi.IfThenElseBlock(cond_block,
-				then_block.last_block, else_block.last_block)
+		return hrmi.CompoundBlock(cond_block,
+				[*then_block.get_exit_blocks(), *else_block.get_exit_blocks()])
 
 class CompareEq(AbstractEqualityOperator):
 	pass
@@ -959,8 +962,8 @@ class AbstractInequalityOperator(AbstractBinaryOperator):
 		else:
 			neg_cond_block.assign_next(else_block.first_block)
 
-		return hrmi.IfThenElseBlock(neg_cond_block,
-				then_block.last_block, else_block.last_block)
+		return hrmi.CompoundBlock(neg_cond_block,
+				[*then_block.get_exit_blocks(), *else_block.get_exit_blocks()])
 
 	def eval_static(self, left, right):
 		val = left < right or (self.includes_zero and left == right)
@@ -1032,6 +1035,57 @@ class LogicalNot(AbstractExpr):
 	def __repr__(self):
 		return (type(self).__name__ + "("
 			+ repr(self.operand) + ")")
+
+class LogicalAnd(AbstractBinaryOperator):
+	def validate_branchable(self, namespace):
+		self.left, injected_stmts = validate_expr_branchable(
+				self.left, namespace)
+		self.right, injected_stmts_right = validate_expr_branchable(
+				self.right, namespace)
+
+		if len(injected_stmts_right) > 0:
+			self.right = InlineStatementExpr(injected_stmts_right, self.right)
+
+		return (None, injected_stmts)
+
+	def create_branch_block(self, then_block, else_block, lineno):
+		right_block = self.right.create_branch_block(
+				then_block, else_block, lineno)
+		left_block = self.left.create_branch_block(
+				right_block, else_block, lineno)
+
+		return left_block
+
+# Allows for statements to be evaluated in the middle of an expression.
+# Similar to C's ({ ... }) syntax.
+class InlineStatementExpr(AbstractExpr):
+	__slots__ = (
+		# StatementList of statements to evaluate.
+		"body",
+
+		# Expression used to return a value to
+		# the parent statement or expression.
+		"return_expr",
+	)
+
+	def __init__(self, body, return_expr):
+		self.body = body
+		self.return_expr = return_expr
+
+		if not isinstance(self.body, StatementList):
+			self.body = StatementList(self.body)
+
+	def create_branch_block(self, then_block, else_block, lineno):
+		self.body.create_blocks()
+
+		branch = self.return_expr.create_branch_block(
+				then_block, else_block, lineno)
+
+		for blk in self.body.get_exit_blocks():
+			blk.assign_next(branch)
+
+		return hrmi.CompoundBlock(self.body.first_block,
+				branch.get_exit_blocks())
 
 # Collection of names used in a part or whole of the program
 class Namespace:
