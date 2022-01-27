@@ -79,6 +79,10 @@ def p_operator_add_equals(p):
 	"add_equals : ADD_EQUALS optws"
 	pass
 
+def p_operator_sub_equals(p):
+	"sub_equals : SUB_EQUALS optws"
+	pass
+
 def p_operator_add(p):
 	"add : ADD optws"
 	pass
@@ -178,6 +182,10 @@ def p_assign(p):
 def p_add_assign(p):
 	"expr_assign : name add_equals expr_assign"
 	p[0] = ast.Assignment(p[1], ast.Add(ast.VariableRef(p[1]), p[3]))
+
+def p_sub_assign(p):
+	"expr_assign : name sub_equals expr_assign"
+	p[0] = ast.Assignment(p[1], ast.Subtract(ast.VariableRef(p[1]), p[3]))
 
 def p_no_assign(p):
 	"expr_assign : expr"
