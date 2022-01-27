@@ -304,3 +304,22 @@ class TestAddEquals(AbstractTests.TestValidProgram):
 			([ 0,   6,  2,   0,  0,  0, -8,  8], [ 6,   2,  0,  0]),
 			([-9,   0,  0, -14,  6, -6,  7, -7], [-9, -14,  0,  0]),
 		])
+
+class TestSubEquals(AbstractTests.TestValidProgram):
+	source_path = "misc/sub-equals.hc"
+	floor_size = 16
+
+	# This program tests the '-=' assignment operator
+
+	# This file should read two values at a time from
+	# the inbox, and output their difference.
+	def test_output(self):
+		self.run_tests([
+			([], []),
+			([ 1,  18], [-17]),
+			([-2, -12, 14,   9], [10, 5]),
+			([ 4,  11, -5,  12, 14, 12], [-7, -17, 2]),
+			([ 3,   5,  1,   4,  6, -8, -7,  5], [-2, -3, 14, -12]),
+			([ 0,   6,  2,   0,  0,  0, -8,  8], [-6,  2,  0, -16]),
+			([-9,   0,  0, -14,  6, -6,  7, -7], [-9, 14, 12,  14]),
+		])
