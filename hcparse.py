@@ -125,6 +125,10 @@ def p_operator_and(p):
 	"and : DBL_AND optws"
 	pass
 
+def p_operator_or(p):
+	"or : DBL_OR optws"
+	pass
+
 def p_identifier(p):
 	"name : IDENTIFIER optws"
 	p[0] = p[1]
@@ -167,14 +171,24 @@ def p_no_assign(p):
 	"expr_assign : expr"
 	p[0] = p[1]
 
+# Expressions - Logical Or
+
+def p_or(p):
+	"expr : expr or expr_and"
+	p[0] = ast.LogicalOr(p[1], p[3])
+
+def p_no_or(p):
+	"expr : expr_and"
+	p[0] = p[1]
+
 # Expressions - Logical And
 
 def p_and(p):
-	"expr : expr and expr_eq"
+	"expr_and : expr_and and expr_eq"
 	p[0] = ast.LogicalAnd(p[1], p[3])
 
 def p_no_and(p):
-	"expr : expr_eq"
+	"expr_and : expr_eq"
 	p[0] = p[1]
 
 # Expressions - Equality Operators
