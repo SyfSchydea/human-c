@@ -1036,7 +1036,8 @@ class LogicalNot(AbstractExpr):
 		return (type(self).__name__ + "("
 			+ repr(self.operand) + ")")
 
-class LogicalAnd(AbstractBinaryOperator):
+# Parent class for && and ||
+class AbstractLogicalBinaryOperator(AbstractBinaryOperator):
 	def validate_branchable(self, namespace):
 		self.left, injected_stmts = validate_expr_branchable(
 				self.left, namespace)
@@ -1048,6 +1049,7 @@ class LogicalAnd(AbstractBinaryOperator):
 
 		return (None, injected_stmts)
 
+class LogicalAnd(AbstractLogicalBinaryOperator):
 	def create_branch_block(self, then_block, else_block, lineno):
 		right_block = self.right.create_branch_block(
 				then_block, else_block, lineno)
@@ -1056,8 +1058,14 @@ class LogicalAnd(AbstractBinaryOperator):
 
 		return left_block
 
-class LogicalAnd(AbstractBinaryOperator):
-	pass
+class LogicalOr(AbstractLogicalBinaryOperator):
+	def create_branch_block(self, then_block, else_block, lineno):
+		right_block = self.right.create_branch_block(
+				then_block, else_block, lineno)
+		left_block = self.left.create_branch_block(
+				then_block, right_block, lineno)
+
+		return left_block
 
 # Allows for statements to be evaluated in the middle of an expression.
 # Similar to C's ({ ... }) syntax.
