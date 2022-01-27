@@ -188,3 +188,8 @@ class TestLogicalAndComplexRight(AbstractTests.TestValidProgram):
 			([1, 1, -6, 6, -16, 16], [6]),
 			([4, 3, 7, -7, 7, 10, 5, -5, 5, 20, 11, -11], []),
 		])
+
+class TestConstAnd(AbstractTests.TestEcho):
+	# This file tests static evaluation of the logical and operator.
+	source_path = "misc/const-and.hc"
+	floor_size = 16
