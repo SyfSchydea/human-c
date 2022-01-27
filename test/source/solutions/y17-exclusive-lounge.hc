@@ -16,13 +16,7 @@ init zero @ 4
 init one @ 5
 
 forever
-	if input < 0
-		if input < 0
-			output zero
-		else
-			output one
+	if input < 0 != input < 0
+		output one
 	else
-		if input < 0
-			output one
-		else
-			output zero
+		output zero
