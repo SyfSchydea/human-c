@@ -260,3 +260,30 @@ class TestLogicalXor(AbstractTests.TestValidProgram):
 			 [            6,  0,   4,   0]),
 			([ 10,   5,   8, 13,  10,   9,  3,  10], []),
 		])
+
+class TestLogicalXnor(AbstractTests.TestValidProgram):
+	source_path = "misc/logical-xnor.hc"
+	floor_size = 16
+
+	# This file tests use of the equals operator as logical xnor.
+	# The file should read pairs of values from the inbox, then output them both
+	# only if either both or neither are non-negative.
+	def test_output(self):
+		self.run_tests([
+			([], []),
+			([  1, -11], []),
+			([ -2,  11,  -7,  7], []),
+			([  3,  -4,   2, 13,  -9, -14], [2, 13, -9, -14]),
+			([-12,  11, -11, -1,  14, -14, -8,   7],
+			 [          -11, -1,                  ]),
+			([ -3,  -9,  13, -3, -13,  10, -4, -21],
+			 [ -3,  -9,                    -4, -21]),
+			([  7,   0,   0,  5,   1,  17,  1, -12],
+			 [  7,   0,   0,  5,   1,  17]),
+			([  0,   0,   6,  0,   4,   0,  3,  10],
+			 [  0,   0,   6,  0,   4,   0,  3,  10]),
+			([ 10,   5,   8, 13,  10,   9,  3,  10],
+			 [ 10,   5,   8, 13,  10,   9,  3,  10]),
+			([  0,   0,  -7,  0,   0,  -3, -5, -11],
+			 [  0,   0,                    -5, -11]),
+		])
