@@ -277,6 +277,7 @@ class Block:
 	
 	def assign_next(self, next_block):
 		if self.next is not None:
+			print("Bad assign. New one:", next_block, "Old one:", self.next.dest)
 			raise HRMIInternalError("Attempted to assign mulitple unconditional jumps to block")
 
 		jmp = Jump(self, next_block)
@@ -361,6 +362,9 @@ class Block:
 			jmp.src.back_propagate_variable_use(-1, var_name,
 					is_pre_initialised)
 
+	def get_exit_blocks(self):
+		return (self,)
+
 	def __repr__(self):
 		return ("Block("
 			+ repr(self.instructions) + ")")
@@ -425,15 +429,17 @@ class CompoundBlock:
 		# Entry point into this block
 		"first_block",
 
-		# List of exit points out of this block
+		# Set of exit points out of this block
 		"exit_points",
 	]
 
 	def __init__(self, first_block, exit_points=None):
 		self.first_block = first_block
-		self.exit_points = exit_points
-		if self.exit_points is None:
-			self.exit_points = []
+
+		if exit_points is None:
+			self.exit_points = set()
+		else:
+			self.exit_points = set(exit_points)
 
 	def add_instruction(self, instr):
 		raise TypeError("Cannot add instruction directly to a Compound Block")
@@ -444,6 +450,9 @@ class CompoundBlock:
 
 	def register_jump_in(self, jump):
 		self.first_block.register_jump_in(jump)
+
+	def get_exit_blocks(self):
+		return tuple(self.exit_points)
 
 	def __repr__(self):
 		return (type(self).__name__ + "("

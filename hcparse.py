@@ -117,6 +117,14 @@ def p_operator_ge(p):
 	"cmp_ge : GREATER_THAN_OR_EQUAL optws"
 	pass
 
+def p_operator_not(p):
+	"not : BANG optws"
+	pass
+
+def p_operator_and(p):
+	"and : DBL_AND optws"
+	pass
+
 def p_identifier(p):
 	"name : IDENTIFIER optws"
 	p[0] = p[1]
@@ -149,6 +157,8 @@ def p_expr_as_stmt(p):
 	"stmt : expr_assign"
 	p[0] = ast.ExprLine(p[1])
 
+# Expressions - Assignments
+
 def p_assign(p):
 	"expr_assign : name equals expr_assign"
 	p[0] = ast.Assignment(p[1], p[3])
@@ -157,17 +167,31 @@ def p_no_assign(p):
 	"expr_assign : expr"
 	p[0] = p[1]
 
+# Expressions - Logical And
+
+def p_and(p):
+	"expr : expr and expr_eq"
+	p[0] = ast.LogicalAnd(p[1], p[3])
+
+def p_no_and(p):
+	"expr : expr_eq"
+	p[0] = p[1]
+
+# Expressions - Equality Operators
+
 def p_eq(p):
-	"expr : expr cmp_eq expr_ineq"
+	"expr_eq : expr_eq cmp_eq expr_ineq"
 	p[0] = ast.CompareEq(p[1], p[3])
 
 def p_ne(p):
-	"expr : expr cmp_ne expr_ineq"
+	"expr_eq : expr_eq cmp_ne expr_ineq"
 	p[0] = ast.CompareNe(p[1], p[3])
 
 def p_expr_ineq(p):
-	"expr : expr_ineq"
+	"expr_eq : expr_ineq"
 	p[0] = p[1]
+
+# Expressions - Inequality Operators
 
 def p_le(p):
 	"expr_ineq : expr_ineq cmp_le expr_s"
@@ -189,9 +213,7 @@ def p_expr_s(p):
 	"expr_ineq : expr_s"
 	p[0] = p[1]
 
-def p_expr_m(p):
-	"expr_s : expr_m"
-	p[0] = p[1]
+# Expressions - Additive Operators
 
 def p_add(p):
 	"expr_s : expr_s add expr_m"
@@ -201,21 +223,35 @@ def p_sub(p):
 	"expr_s : expr_s subtract expr_m"
 	p[0] = ast.Subtract(p[1], p[3])
 
-def p_expr_unary(p):
-	"expr_m : expr_unary"
+def p_expr_m(p):
+	"expr_s : expr_m"
 	p[0] = p[1]
+
+# Expressions - Multiplication
 
 def p_mul(p):
 	"expr_m : expr_m multiply expr_unary"
 	p[0] = ast.Multiply(p[1], p[3])
 
+def p_expr_unary(p):
+	"expr_m : expr_unary"
+	p[0] = p[1]
+
+# Expressions - Prefix Unary Operators
+
 def p_unary_minus(p):
 	"expr_unary : subtract expr_unary"
 	p[0] = ast.Subtract(ast.Number(0), p[2])
 
+def p_logical_not(p):
+	"expr_unary : not expr_unary"
+	p[0] = ast.LogicalNot(p[2])
+
 def p_expr_v(p):
 	"expr_unary : expr_v"
 	p[0] = p[1]
+
+# Expressions - Single Values
 
 def p_input(p):
 	"expr_v : input"
