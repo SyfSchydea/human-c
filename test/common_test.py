@@ -126,20 +126,25 @@ class AbstractTests:
 				with self.subTest(self.input_to_name(inbox)):
 					self.run_program(inbox, inbox)
 
-	# Perform tests on a program which should triple each value in the inbox.
-	class TestTriple(TestValidProgram):
+	# Perform tests on a file which should multiply each value in the inbox by a
+	# given factor, then output it.
+	class TestMultiply(TestValidProgram):
+		# Concrete tests should have a 'factor' property
+
 		floor_size = 16
 
-		def test_triple(self):
+		def test_multiply(self):
 			for inbox in [
 				[],
 				[1, 2, 3, 4, 5],
+				[1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89],
 				[2, 3, 5, 7, 11, 13, 17, 23, 29, 31, 37, 41, 43],
-				[1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233],
 				[3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7, 9, 3],
+				[-12, -4, -5, -4, -9, -7, -5, -10, -20, -14, -9],
+				[-10, 0, 0, 0, 0, -9, -21, -9, 5, 0, -14, -2, 0],
 			]:
 				with self.subTest(self.input_to_name(inbox)):
-					self.run_program(inbox, [x * 3 for x in inbox])
+					self.run_program(inbox, [x * self.factor for x in inbox])
 
 	# Run test cases on programs expected to throw an error in the compiler
 	class TestError(unittest.TestCase):
