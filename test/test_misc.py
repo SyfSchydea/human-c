@@ -281,3 +281,7 @@ class TestLogicalXnor(AbstractTests.TestValidProgram):
 class TestConstXor(AbstractTests.TestMultiply):
 	source_path = "misc/const-xor.hc"
 	factor = 2
+
+class TestConstXnor(AbstractTests.TestMultiply):
+	source_path = "misc/const-xnor.hc"
+	factor = 2
