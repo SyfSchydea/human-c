@@ -323,3 +323,7 @@ class TestSubEquals(AbstractTests.TestValidProgram):
 			([ 0,   6,  2,   0,  0,  0, -8,  8], [-6,  2,  0, -16]),
 			([-9,   0,  0, -14,  6, -6,  7, -7], [-9, 14, 12,  14]),
 		])
+
+class TestMulEquals(AbstractTests.TestMultiply):
+	source_path = "misc/mul-equals.hc"
+	factor = 4
