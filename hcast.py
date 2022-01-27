@@ -364,6 +364,13 @@ class AbstractExpr:
 	def get_namespace(self):
 		raise NotImplementedError("AbstractExpr.get_namespace", self)
 
+	# Fetch the return type of this expression
+	def get_type(self):
+		if hasattr(self, "hctype"):
+			return self.hctype
+
+		raise NotImplementedError("AbstractExpr.get_type", self)
+
 # eg. name = expr
 class Assignment(AbstractExpr):
 	__slots__ = [
@@ -393,8 +400,46 @@ class Assignment(AbstractExpr):
 			+ repr(self.name) + ", "
 			+ repr(self.expr) + ")")
 
+class Primitive(AbstractExpr):
+	__slots__ = ["value"]
+
+	def __init__(self, value):
+		self.value = value
+
+	@classmethod
+	def get_type(cls):
+		return cls
+
+	def __repr__(self):
+		return (type(self).__name__ + "(" + repr(self.value) + ")")
+
+class Number(Primitive):
+	def add_to_block(self, block):
+		block.add_instruction(hrmi.LoadConstant(self.value))
+
+	def validate(self, namespace):
+		return (None, None)
+
+	def has_side_effects(self):
+		return False
+
+	def get_namespace(self):
+		return Namespace()
+
+# Boolean value.
+# Currently not directly producable by the source code
+class Boolean(Primitive):
+	def create_branch_block(self, then_block, else_block, lineno=None):
+		block = then_block if self.value else else_block
+		return hrmi.CompoundBlock(block.first_block, block.get_exit_blocks())
+
+def is_zero(expr):
+	return isinstance(expr, Number) and expr.value == 0
+
 class VariableRef(AbstractExpr):
 	__slots__ = ["name"]
+
+	hctype = Number
 
 	def add_to_block(self, block):
 		block.add_instruction(hrmi.Load(self.name))
@@ -415,48 +460,9 @@ class VariableRef(AbstractExpr):
 		return ("VariableRef("
 			+ repr(self.name) + ")")
 
-class Number(AbstractExpr):
-	__slots__ = ["value"]
-
-	def __init__(self, value):
-		self.value = value
-
-	def add_to_block(self, block):
-		block.add_instruction(hrmi.LoadConstant(self.value))
-
-	def validate(self, namespace):
-		return (None, None)
-
-	def has_side_effects(self):
-		return False
-
-	def get_namespace(self):
-		return Namespace()
-
-	def __repr__(self):
-		return ("Number("
-			+ repr(self.value) + ")")
-
-def is_zero(expr):
-	return isinstance(expr, Number) and expr.value == 0
-
-# Boolean value.
-# Currently not directly producable by the source code
-class Boolean(AbstractExpr):
-	__slots__ = ["value"]
-
-	def __init__(self, value):
-		self.value = value
-
-	def create_branch_block(self, then_block, else_block, lineno=None):
-		block = then_block if self.value else else_block
-		return hrmi.CompoundBlock(block.first_block, block.get_exit_blocks())
-
-	def __repr__(self):
-		return ("Boolean("
-			+ repr(self.value) + ")")
-
 class Input(AbstractExpr):
+	hctype = Number
+
 	def add_to_block(self, block):
 		block.add_instruction(hrmi.Input())
 
@@ -498,6 +504,8 @@ class AbstractBinaryOperator(AbstractExpr):
 			+ repr(self.right) + ")")
 
 class AbstractAdditiveOperator(AbstractBinaryOperator):
+	hctype = Number
+
 	# True in subclasses if left and right operands may
 	# be swapped without affecting the operation.
 	commutative = False
@@ -802,6 +810,8 @@ def validate_expr_mul_const(expr, n, namespace):
 	return (expanded_expr, injected_stmts)
 
 class Multiply(AbstractBinaryOperator):
+	hctype = Number
+
 	def validate(self, namespace):
 		self.left,  injected_stmts       = validate_expr(self.left,  namespace)
 		self.right, injected_stmts_right = validate_expr(self.right, namespace)
@@ -835,9 +845,20 @@ class Multiply(AbstractBinaryOperator):
 		raise HCTypeError("Unable to multiply", self.left, "with", self.right)
 
 class AbstractEqualityOperator(AbstractBinaryOperator):
+	hctype = Boolean
+
 	negate = False
 
+	# Check if the types of the operands of this operation indicate that this is
+	# performing XOR rather than equality.
+	def is_xor(self):
+		return (self.left.get_type() is Boolean and
+				self.right.get_type() is Boolean)
+
 	def validate_branchable(self, namespace):
+		if self.is_xor():
+			return self.validate_branchable_as_xor(namespace)
+
 		self.left,  injected_stmts    = validate_expr(self.left,  namespace)
 		self.right, injected_stmts_rt = validate_expr(self.right, namespace)
 
@@ -878,10 +899,22 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 
 			return (None, injected_stmts)
 
+	def validate_branchable_as_xor(self, namespace):
+		self.left, injected_stmts = validate_expr_branchable(
+				self.left, namespace)
+		self.right, injected_stmts_right = validate_expr_branchable(
+				self.right, namespace)
+
+		injected_stmts.extend(injected_stmts_right)
+		return (None, injected_stmts)
+
 	# Create a Compound condition block which branches to one block
 	# if it passes the condition, or another if it fails.
 	# then_block and else_block are both CompoundBlock objects
 	def create_branch_block(self, then_block, else_block, lineno):
+		if self.is_xor():
+			return self.create_xor_block(then_block, else_block, lineno)
+
 		if not is_zero(self.right):
 			raise HCInternalError("Unable to directly compare "
 					+ "to non-zero values", self)
@@ -897,6 +930,21 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 		return hrmi.CompoundBlock(cond_block,
 				[*then_block.get_exit_blocks(), *else_block.get_exit_blocks()])
 
+	def create_xor_block(self, then_block, else_block, lineno):
+		# XOR is compiled such that there are two copies of the right condition:
+		# one for each possible outcome of the left condition.
+		right_true_block = self.right.create_branch_block(
+				then_block, else_block, lineno)
+		right_false_block = self.right.create_branch_block(
+				else_block, then_block, lineno)
+
+		if self.negate:
+			(right_true_block, right_false_block) = (
+					right_false_block, right_true_block)
+
+		return self.left.create_branch_block(
+				right_true_block, right_false_block, lineno)
+
 class CompareEq(AbstractEqualityOperator):
 	pass
 
@@ -904,6 +952,8 @@ class CompareNe(AbstractEqualityOperator):
 	negate = True
 
 class AbstractInequalityOperator(AbstractBinaryOperator):
+	hctype = Boolean
+
 	# Set to True by subclasses if the comparison
 	# is implemented as the negative of another.
 	negative = False
