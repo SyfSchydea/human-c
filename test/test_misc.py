@@ -236,3 +236,27 @@ class TestConstOr(AbstractTests.TestValidProgram):
 			([ 12,  1, -2, -7, 3, 2], [120, 10, -20, -70, 30, 20]),
 			([  0,  0,  0,  0], [0, 0, 0, 0]),
 		])
+
+class TestLogicalXor(AbstractTests.TestValidProgram):
+	source_path = "misc/logical-xor.hc"
+	floor_size = 16
+
+	# This file tests use of the not equals operator as logical xor.
+	# The file should read pairs of values from the inbox, then output them both
+	# only if exactly one is positive.
+	def test_output(self):
+		self.run_tests([
+			([], []),
+			([  1, -11], [1, -11]),
+			([ -2,  11,  -7,  7], [-2, 11, -7, 7]),
+			([  3,  -4,   2, 13,  -9, -14], [3, -4]),
+			([-12,  11, -11, -1,  14, -14, -8,   7],
+			 [-12,  11,           14, -14, -8,   7]),
+			([ -3,  -9,  13, -3, -13,  10, -4, -21],
+			 [           13, -3, -13,  10]),
+			([  7,   0,   0,  5,   1,  17,  1, -12],
+			 [  7,   0,   0,  5,            1, -12]),
+			([  0,   0,   6,  0,   4,   0,  3,  10],
+			 [            6,  0,   4,   0]),
+			([ 10,   5,   8, 13,  10,   9,  3,  10], []),
+		])
