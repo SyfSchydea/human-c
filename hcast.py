@@ -1043,14 +1043,8 @@ class LogicalAnd(AbstractBinaryOperator):
 		self.right, injected_stmts_right = validate_expr_branchable(
 				self.right, namespace)
 
-		# The right-hand side of the operator should only be evaluated if the
-		# left-hand side evaluates to true. Therefore if the right-hand side
-		# requires injected statements to evaluate, they cannot be simply
-		# injected before the current statement unconditionally. There is no
-		# support yet to allow these statements to be evaluated correctly.
 		if len(injected_stmts_right) > 0:
-			raise HCInternalError("Cannot validate logical and statements "
-					"which require injected statements on the right-hand side")
+			self.right = InlineStatementExpr(injected_stmts_right, self.right)
 
 		return (None, injected_stmts)
 
@@ -1061,6 +1055,37 @@ class LogicalAnd(AbstractBinaryOperator):
 				right_block, else_block, lineno)
 
 		return left_block
+
+# Allows for statements to be evaluated in the middle of an expression.
+# Similar to C's ({ ... }) syntax.
+class InlineStatementExpr(AbstractExpr):
+	__slots__ = (
+		# StatementList of statements to evaluate.
+		"body",
+
+		# Expression used to return a value to
+		# the parent statement or expression.
+		"return_expr",
+	)
+
+	def __init__(self, body, return_expr):
+		self.body = body
+		self.return_expr = return_expr
+
+		if not isinstance(self.body, StatementList):
+			self.body = StatementList(self.body)
+
+	def create_branch_block(self, then_block, else_block, lineno):
+		self.body.create_blocks()
+
+		branch = self.return_expr.create_branch_block(
+				then_block, else_block, lineno)
+
+		for blk in self.body.get_exit_blocks():
+			blk.assign_next(branch)
+
+		return hrmi.CompoundBlock(self.body.first_block,
+				branch.get_exit_blocks())
 
 # Collection of names used in a part or whole of the program
 class Namespace:
