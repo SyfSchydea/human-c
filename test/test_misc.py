@@ -285,3 +285,22 @@ class TestConstXor(AbstractTests.TestMultiply):
 class TestConstXnor(AbstractTests.TestMultiply):
 	source_path = "misc/const-xnor.hc"
 	factor = 2
+
+class TestAddEquals(AbstractTests.TestValidProgram):
+	source_path = "misc/add-equals.hc"
+	floor_size = 16
+
+	# This program tests the '+=' assignment operator
+
+	# This file should read two values at a time from
+	# the inbox, and output their sum.
+	def test_output(self):
+		self.run_tests([
+			([], []),
+			([ 1,  18], [19]),
+			([-2, -12, 14,   9], [-14, 23]),
+			([ 4,  11, -5,  12, 14, 12], [15, 7, 26]),
+			([ 3,   5,  1,   4,  6, -8, -7,  5], [ 8,   5, -2, -2]),
+			([ 0,   6,  2,   0,  0,  0, -8,  8], [ 6,   2,  0,  0]),
+			([-9,   0,  0, -14,  6, -6,  7, -7], [-9, -14,  0,  0]),
+		])

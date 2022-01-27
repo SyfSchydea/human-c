@@ -41,6 +41,8 @@ def p_no_ws(p):
 	"optws :"
 	p[0] = ""
 
+# Terminal Wrappers
+
 def p_keyword_init(p):
 	"init : INIT optws"
 	pass
@@ -71,6 +73,10 @@ def p_operator_at(p):
 
 def p_operator_equals(p):
 	"equals : EQUALS optws"
+	pass
+
+def p_operator_add_equals(p):
+	"add_equals : ADD_EQUALS optws"
 	pass
 
 def p_operator_add(p):
@@ -137,6 +143,8 @@ def p_number(p):
 	"number : NUMBER optws"
 	p[0] = p[1]
 
+# Statements
+
 def p_declare_init(p):
 	"stmt : init name at number"
 	p[0] = ast.InitialValueDeclaration(p[2], p[4])
@@ -166,6 +174,10 @@ def p_expr_as_stmt(p):
 def p_assign(p):
 	"expr_assign : name equals expr_assign"
 	p[0] = ast.Assignment(p[1], p[3])
+
+def p_add_assign(p):
+	"expr_assign : name add_equals expr_assign"
+	p[0] = ast.Assignment(p[1], ast.Add(ast.VariableRef(p[1]), p[3]))
 
 def p_no_assign(p):
 	"expr_assign : expr"

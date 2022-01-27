@@ -37,6 +37,7 @@ tokens = (
 	"BANG",
 	"DBL_AND",
 	"DBL_OR",
+	"ADD_EQUALS",
 
 	*keywords.values(),
 )
@@ -121,6 +122,10 @@ def t_GREATER_THAN(t):
 
 def t_AT(t):
 	r"@"
+	return track(t)
+
+def t_ADD_EQUALS(t):
+	r"\+="
 	return track(t)
 
 def t_ADD(t):
