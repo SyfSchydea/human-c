@@ -64,7 +64,10 @@ class AbstractTests:
 					self.fail("Not enough stuff in the\n"
 							"OUTBOX! Management\n"
 							f"expected a total of {len(expected)} items,\n"
-							f"not {len(actual)}!")
+							f"not {len(actual)}!\n"
+							"\n"
+							f"Expected: {repr(expected)}\n"
+							f"Actual:   {repr(actual)}")
 
 				if expected[i] != actual[i]:
 					self.fail("Bad outbox!\n"
@@ -97,6 +100,13 @@ class AbstractTests:
 			for inbox, expected_outbox in test_cases:
 				with self.subTest(self.input_to_name(inbox)):
 					self.run_program(inbox, expected_outbox)
+
+		# Run a sequence of test cases without manually specifying the outboxes.
+		# Expected outboxes are created using static method get_expected_outbox.
+		def run_tests_auto(self, inboxes):
+			self.run_tests(
+					(inbox, self.get_expected_outbox(inbox))
+						for inbox in inboxes)
 
 		def input_to_name(self, inputs):
 			if len(inputs) == 0:
