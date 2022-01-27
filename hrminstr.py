@@ -316,12 +316,11 @@ class Block:
 
 		if self.hands_at_start is None:
 			worst_hands = new_hands
-
 		else:
 			worst_hands = self.hands_at_start.worst_case(new_hands)
 
 		if worst_hands != self.hands_at_start:
-			self.hands_at_start = new_hands
+			self.hands_at_start = worst_hands
 			self.hand_data_propagated = False
 
 	# Mark instructions as using the given variable names
@@ -489,6 +488,9 @@ class AbstractHandsConstraint:
 class EmptyHands(AbstractHandsConstraint):
 	CONSTRAINT_ID = 0
 
+	def __repr__(self):
+		return type(self).__name__ + "()"
+
 # The processor is holding a value which matches the value of a variable
 class VariableInHands(AbstractHandsConstraint):
 	CONSTRAINT_ID = 1
@@ -508,6 +510,9 @@ class VariableInHands(AbstractHandsConstraint):
 	def __hash__(self):
 		return hash((self.CONSTRAINT_ID, self.name))
 
+	def __repr__(self):
+		return type(self).__name__ + "(" + repr(self.name) + ")"
+
 # The processor is holding a specific, constant value
 class ValueInHands(AbstractHandsConstraint):
 	CONSTRAINT_ID = 2
@@ -526,6 +531,9 @@ class ValueInHands(AbstractHandsConstraint):
 
 	def __hash__(self):
 		return hash((self.CONSTRAINT_ID, self.value))
+
+	def __repr__(self):
+		return type(self).__name__ + "(" + repr(self.value) + ")"
 
 # Holds a set of zero or more constraints about the processor's
 # hands at a particular point in execution
@@ -569,3 +577,7 @@ class HandsState:
 			return NotImplemented
 
 		return self.constraints == other.constraints
+
+	def __repr__(self):
+		return (type(self).__name__ + "("
+				+ repr(self.constraints) + ")")
