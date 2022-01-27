@@ -39,6 +39,7 @@ tokens = (
 	"DBL_OR",
 	"ADD_EQUALS",
 	"SUB_EQUALS",
+	"MUL_EQUALS",
 
 	*keywords.values(),
 )
@@ -139,6 +140,10 @@ def t_SUB_EQUALS(t):
 
 def t_SUBTRACT(t):
 	r"-"
+	return track(t)
+
+def t_MUL_EQUALS(t):
+	r"\*="
 	return track(t)
 
 def t_MULTIPLY(t):
