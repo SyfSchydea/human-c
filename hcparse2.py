@@ -117,10 +117,8 @@ def nest_lines(line_list):
 		stack[-1].statements.append(line)
 
 		# Add self to stack if expected sub-statements
-		if isinstance(line, ast.Forever):
-			stack.append(StackEntry(line.body))
-		elif isinstance(line, ast.If):
-			stack.append(StackEntry(line.then_block))
+		if isinstance(line, ast.StmtWithBody):
+			stack.append(StackEntry(line.get_body()))
 	
 	return stack[0].statements
 
