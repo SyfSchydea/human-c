@@ -222,9 +222,24 @@ class StatementList:
 	def __repr__(self):
 		return f"StatementList({repr(self.stmts)})"
 
+# Abstract class for lines/statements which contain an indented body block after
+# them.
+class StmtWithBody(AbstractLine):
+	def get_body(self):
+		raise NotImplementedError("StmtWithBody.get_body", self)
+
 # forever loop
-class Forever(AbstractLine):
+class Forever(StmtWithBody):
 	__slots__ = ["body"]
+
+	def __init__(self, body=None):
+		self.body = body
+
+		if self.body is None:
+			self.body = StatementList()
+
+	def get_body(self):
+		return self.body
 
 	def create_block(self):
 		self.body.create_blocks()
@@ -242,16 +257,10 @@ class Forever(AbstractLine):
 		self.body.validate_structure(namespace)
 		return None
 
-	def __init__(self, body=None):
-		self.body = body
-
-		if self.body is None:
-			self.body = StatementList()
-
 	def __repr__(self):
 		return f"Forever({repr(self.body)})"
 
-class While(AbstractLine):
+class While(StmtWithBody):
 	__slots__ = [
 		"condition",
 		"body",
@@ -261,7 +270,10 @@ class While(AbstractLine):
 		self.condition = cond
 		self.body = body if body is not None else StatementList()
 
-class If(AbstractLine):
+	def get_body(self):
+		return self.body
+
+class If(StmtWithBody):
 	__slots__ = [
 		"condition",
 		"then_block",
@@ -275,6 +287,11 @@ class If(AbstractLine):
 
 		if self.then_block is None:
 			self.then_block = StatementList()
+
+	def get_body(self):
+		# This always returns the then_block. This function is used by the phase
+		# 2 parser, which handles else statements specially.
+		return self.then_block
 
 	def create_block(self):
 		# Fill in empty else block
