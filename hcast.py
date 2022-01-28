@@ -989,8 +989,8 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 
 		cond_block = hrmi.Block(lineno)
 		self.left.add_to_block(cond_block)
-		cond_block.assign_jz(then_block.first_block)
-		cond_block.assign_next(else_block.first_block)
+		cond_block.assign_jz(then_block.get_entry_block())
+		cond_block.assign_next(else_block.get_entry_block())
 
 		return hrmi.CompoundBlock(cond_block,
 				[*then_block.get_exit_blocks(), *else_block.get_exit_blocks()])
