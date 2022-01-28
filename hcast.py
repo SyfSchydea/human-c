@@ -211,6 +211,9 @@ class StatementList:
 
 		return self.stmts[-1]
 
+	def get_entry_block(self):
+		return self.first_block
+
 	def get_exit_blocks(self):
 		return self.last_block.get_exit_blocks()
 
@@ -272,6 +275,40 @@ class While(StmtWithBody):
 
 	def get_body(self):
 		return self.body
+
+	def get_namespace(self):
+		ns = self.condition.get_namespace()
+		ns.merge(self.body.get_namespace())
+		return ns
+
+	def validate(self, namespace):
+		self.condition, injected_stmts_cond = validate_expr_branchable(
+				self.condition, namespace)
+
+		if len(injected_stmts_cond) > 0:
+			self.condition = InlineStatementExpr(
+					injected_stmts_cond, self.condition)
+
+		self.body.validate_structure(namespace)
+
+		return None
+	
+	def create_block(self):
+		self.body.create_blocks()
+		exit_block = hrmi.Block(self.lineno)
+
+		cond_block = self.condition.create_branch_block(
+				self.body, exit_block, self.lineno)
+
+		for blk in self.body.get_exit_blocks():
+			blk.assign_next(cond_block.get_entry_block())
+
+		self.block = hrmi.CompoundBlock(cond_block, [exit_block])
+
+	def __repr__(self):
+		return (type(self).__name__ + "("
+			+ repr(self.condition) + ", "
+			+ repr(self.body) +")")
 
 class If(StmtWithBody):
 	__slots__ = [
@@ -458,7 +495,8 @@ class Number(Primitive):
 class Boolean(Primitive):
 	def create_branch_block(self, then_block, else_block, lineno=None):
 		block = then_block if self.value else else_block
-		return hrmi.CompoundBlock(block.first_block, block.get_exit_blocks())
+		return hrmi.CompoundBlock(
+				block.get_entry_block(), block.get_exit_blocks())
 
 def is_zero(expr):
 	return isinstance(expr, Number) and expr.value == 0
@@ -1028,16 +1066,16 @@ class AbstractInequalityOperator(AbstractBinaryOperator):
 
 		neg_cond_block = hrmi.Block(lineno)
 		self.left.add_to_block(neg_cond_block)
-		neg_cond_block.assign_jn(then_block.first_block)
+		neg_cond_block.assign_jn(then_block.get_entry_block())
 
 		if self.includes_zero:
 			zero_cond_block = hrmi.Block(lineno)
-			zero_cond_block.assign_jz(then_block.first_block)
-			zero_cond_block.assign_next(else_block.first_block)
+			zero_cond_block.assign_jz(then_block.get_entry_block())
+			zero_cond_block.assign_next(else_block.get_entry_block())
 
 			neg_cond_block.assign_next(zero_cond_block)
 		else:
-			neg_cond_block.assign_next(else_block.first_block)
+			neg_cond_block.assign_next(else_block.get_entry_block())
 
 		return hrmi.CompoundBlock(neg_cond_block,
 				[*then_block.get_exit_blocks(), *else_block.get_exit_blocks()])

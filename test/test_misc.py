@@ -330,7 +330,8 @@ class TestMulEquals(AbstractTests.TestMultiply):
 
 class TestWhile(AbstractTests.TestValidProgram):
 	source_path = "misc/while.hc"
-	floor_size = 16
+
+	initial_memory = [None, 1] + [None] * 14
 
 	# This file should test while loops.
 

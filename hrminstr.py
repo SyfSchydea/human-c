@@ -361,6 +361,9 @@ class Block:
 			jmp.src.back_propagate_variable_use(-1, var_name,
 					is_pre_initialised)
 
+	def get_entry_block(self):
+		return self
+
 	def get_exit_blocks(self):
 		return (self,)
 
@@ -450,6 +453,9 @@ class CompoundBlock:
 	def register_jump_in(self, jump):
 		self.first_block.register_jump_in(jump)
 
+	def get_entry_block(self):
+		return self.first_block
+
 	def get_exit_blocks(self):
 		return tuple(self.exit_points)
 
@@ -461,10 +467,6 @@ class CompoundBlock:
 class ForeverBlock(CompoundBlock):
 	def __init__(self, block):
 		super().__init__(block)
-
-class IfThenElseBlock(CompoundBlock):
-	def __init__(self, block, then_exit, else_exit):
-		super().__init__(block, [then_exit, else_exit])
 
 # Abstract class for constraints on which values the processor's
 # hands may take during execution.
