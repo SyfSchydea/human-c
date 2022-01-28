@@ -51,6 +51,10 @@ def p_keyword_forever(p):
 	"forever : FOREVER optws"
 	pass
 
+def p_keyword_while(p):
+	"while : WHILE optws"
+	pass
+
 def p_keyword_if(p):
 	"if : IF optws"
 	pass
@@ -160,6 +164,10 @@ def p_declare_init(p):
 def p_forever(p):
 	"stmt : forever"
 	p[0] = ast.Forever()
+
+def p_while(p):
+	"stmt : while expr"
+	p[0] = ast.While(p[2])
 
 def p_if(p):
 	"stmt : if expr"

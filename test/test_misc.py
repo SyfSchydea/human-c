@@ -327,3 +327,24 @@ class TestSubEquals(AbstractTests.TestValidProgram):
 class TestMulEquals(AbstractTests.TestMultiply):
 	source_path = "misc/mul-equals.hc"
 	factor = 4
+
+class TestWhile(AbstractTests.TestValidProgram):
+	source_path = "misc/while.hc"
+
+	initial_memory = [None, 1] + [None] * 14
+
+	# This file should test while loops.
+
+	# The file should read each input and output each
+	# number down to 1 for each positive input.
+	# Zero and negative inputs will be ignored.
+	def test_output(self):
+		self.run_tests([
+			([], []),
+			([  3], [3, 2, 1]),
+			([  1,  3], [1, 3, 2, 1]),
+			([  4,  0,  6], [4, 3, 2, 1, 6, 5, 4, 3, 2, 1]),
+			([-14,  6, -7], [6, 5, 4, 3, 2, 1]),
+			([  0, -1, -2,  0], []),
+			([ -4,  5,  0, -9, 2], [5, 4, 3, 2, 1, 2, 1]),
+		])
