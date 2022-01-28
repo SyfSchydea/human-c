@@ -251,6 +251,16 @@ class Forever(AbstractLine):
 	def __repr__(self):
 		return f"Forever({repr(self.body)})"
 
+class While(AbstractLine):
+	__slots__ = [
+		"condition",
+		"body",
+	]
+
+	def __init__(self, cond, body=None):
+		self.condition = cond
+		self.body = body if body is not None else StatementList()
+
 class If(AbstractLine):
 	__slots__ = [
 		"condition",
