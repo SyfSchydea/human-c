@@ -909,6 +909,28 @@ class Multiply(AbstractBinaryOperator):
 
 		raise HCTypeError("Unable to multiply", self.left, "with", self.right)
 
+# Prefix increment
+class Increment(AbstractExpr):
+	__slots__ = [
+		"name",
+	]
+
+	def __init__(self, name):
+		self.name = name
+
+	def get_namespace(self):
+		return Namespace(self.name)
+
+	def validate(self, namespace):
+		return (None, None)
+
+	def add_to_block(self, block):
+		block.add_instruction(hrmi.BumpUp(self.name))
+
+	def __repr__(self):
+		return (type(self).__name__ + "("
+			+ repr(self.name) + ")")
+
 class AbstractEqualityOperator(AbstractBinaryOperator):
 	hctype = Boolean
 
@@ -1123,9 +1145,9 @@ class CompareGe(AbstractInequalityOperator):
 		return CompareLe(self.right, self.left)
 
 class LogicalNot(AbstractExpr):
-	__slots = (
+	__slots = [
 		"operand",
-	)
+	]
 
 	def __init__(self, operand):
 		self.operand = operand
