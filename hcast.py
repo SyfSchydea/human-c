@@ -623,7 +623,7 @@ class AbstractAdditiveOperator(AbstractBinaryOperator):
 			negate_c = self.negate_right_operand != self.right.negate_right_operand
 
 			l_expr = (Subtract if negate_b else Add)(a,      b)
-			expr   = (Subtract if negate_b else Add)(l_expr, c)
+			expr   = (Subtract if negate_c else Add)(l_expr, c)
 
 			expr, rot_stmts = validate_expr(expr, namespace)
 			injected_stmts.extend(rot_stmts)
