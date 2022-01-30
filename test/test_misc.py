@@ -370,3 +370,15 @@ class TestIncrement(AbstractTests.TestValidProgram):
 			([-1, -6, -11, -19, -9], [0, -5, -10, -18, -8]),
 			([ 8,  9,   0,   4, -9], [9, 10,   1,   5, -8]),
 		])
+
+class TestNestedSub(AbstractTests.TestValidProgram):
+	source_path = "misc/nest-sub.hc"
+	floor_size = 16
+
+	# This file tests expansion of nested subtraction operators.
+	def test_output(self):
+		self.run_tests([
+			([], []),
+			([1, 20,  3], [-16, -22, 18]),
+			([7, -9, 10, 12, 7, 17], [26, 6, -12, 22, -12, 2]),
+		])
