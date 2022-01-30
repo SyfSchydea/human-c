@@ -370,3 +370,26 @@ class TestIncrement(AbstractTests.TestValidProgram):
 			([-1, -6, -11, -19, -9], [0, -5, -10, -18, -8]),
 			([ 8,  9,   0,   4, -9], [9, 10,   1,   5, -8]),
 		])
+
+class TestDecrement(AbstractTests.TestValidProgram):
+	source_path = "misc/decrement.hc"
+	floor_size = 16
+
+	# This file tests the prefix decrement operator.
+	# It should take one to the value of its operand,
+	# then return its new value.
+
+	# The file should read each value from the input,
+	# and output its value minus one.
+	def test_output(self):
+		self.run_tests([
+			([], []),
+			([ 7], [6]),
+			([17, 14], [16, 13]),
+			([13, 11,  14], [12, 10, 13]),
+			([12,  4,  20,  11], [11, 3, 19, 10]),
+			([11,  6,  12,  13,  2], [10,  5,  11,  12,   1]),
+			([-1, -6, -11, -19, -9], [-2, -7, -12, -20, -10]),
+			([ 8,  9,   0,   4, -9], [ 7,  8,  -1,   3, -10]),
+			([ 7,  9,  -9,   1,  8], [ 6,  8, -10,   0,   7]),
+		])
