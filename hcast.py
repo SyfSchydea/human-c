@@ -600,7 +600,7 @@ class AbstractAdditiveOperator(AbstractBinaryOperator):
 			return (self.left, injected_stmts)
 
 		if not self.negate_right_operand and is_zero(self.left):
-			return (self.left, injected_stmts)
+			return (self.right, injected_stmts)
 
 		if not self.pseudo and isinstance(self.right, VariableRef):
 			return (None, injected_stmts)

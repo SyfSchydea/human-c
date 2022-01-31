@@ -405,3 +405,8 @@ class TestNestedSub(AbstractTests.TestValidProgram):
 			([1, 20,  3], [-16, -22, 18]),
 			([7, -9, 10, 12, 7, 17], [26, 6, -12, 22, -12, 2]),
 		])
+
+class TestZeroPlusExpr(AbstractTests.TestEcho):
+	# This tests for expansion of the expression (0 + x).
+	# An issue with this was identified in issue #22
+	source_path = "misc/zero-plus-expr.hc"
