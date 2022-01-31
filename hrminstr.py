@@ -82,11 +82,16 @@ class AbstractParameterisedInstruction(HRMInstruction):
 		super().__init__()
 		self.loc = loc
 
-class Save(AbstractParameterisedInstruction):
-	writes_variable = True
-
 	def to_asm(self):
-		return "COPYTO " + str(self.loc)
+		return self.mnemonic + " " + str(self.loc)
+
+	def __repr__(self):
+		return ("hrmi." + type(self).__name__ + "("
+				+ repr(self.loc) + ")")
+
+class Save(AbstractParameterisedInstruction):
+	mnemonic = "COPYTO"
+	writes_variable = True
 
 	def simulate_hands(self, hands):
 		hands.add_constraint(VariableInHands(self.loc))
@@ -99,14 +104,9 @@ class Save(AbstractParameterisedInstruction):
 	def var_redundant(self):
 		return self.loc not in self.variables_used
 
-	def __repr__(self):
-		return f"hrmi.Save({repr(self.loc)})"
-
 class Load(AbstractParameterisedInstruction):
+	mnemonic = "COPYFROM"
 	reads_variable = True
-
-	def to_asm(self):
-		return "COPYFROM " + str(self.loc)
 
 	def simulate_hands(self, hands):
 		var_in_hands = VariableInHands(self.loc)
@@ -116,32 +116,33 @@ class Load(AbstractParameterisedInstruction):
 	def hands_redundant(self, hands_before):
 		return hands_before.has_constraint(VariableInHands(self.loc))
 
-	def __repr__(self):
-		return f"hrmi.Load({repr(self.loc)})"
-
 class Add(AbstractParameterisedInstruction):
+	mnemonic = "ADD"
 	reads_variable = True
-
-	def to_asm(self):
-		return "ADD " + str(self.loc)
 
 	def simulate_hands(self, hands):
 		hands.clear_constraints()
-
-	def __repr__(self):
-		return f"hrmi.Add({repr(self.loc)})"
 
 class Subtract(AbstractParameterisedInstruction):
+	mnemonic = "SUB"
 	reads_variable = True
-
-	def to_asm(self):
-		return "SUB " + str(self.loc)
 
 	def simulate_hands(self, hands):
 		hands.clear_constraints()
 
-	def __repr__(self):
-		return f"hrmi.Subtract({repr(self.loc)})"
+class BumpUp(AbstractParameterisedInstruction):
+	mnemonic = "BUMPUP"
+	reads_variable = True
+
+	def simulate_hands(self, hands):
+		hands.replace_constraints(VariableInHands(self.loc))
+
+class BumpDown(AbstractParameterisedInstruction):
+	mnemonic = "BUMPDN"
+	reads_variable = True
+
+	def simulate_hands(self, hands):
+		hands.replace_constraints(VariableInHands(self.loc))
 
 # Instruction which represents an action in the code which could not be
 # expanded into correct code at the initial code generation stage.

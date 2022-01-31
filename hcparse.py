@@ -95,8 +95,16 @@ def p_operator_add(p):
 	"add : ADD optws"
 	pass
 
+def p_operator_increment(p):
+	"increment : DBL_ADD optws"
+	pass
+
 def p_operator_subtract(p):
 	"subtract : SUBTRACT optws"
+	pass
+
+def p_operator_decrement(p):
+	"decrement : DBL_SUB optws"
 	pass
 
 def p_operator_multiply(p):
@@ -188,19 +196,19 @@ def p_expr_as_stmt(p):
 # Expressions - Assignments
 
 def p_assign(p):
-	"expr_assign : name equals expr_assign"
+	"expr_assign : l_expr equals expr_assign"
 	p[0] = ast.Assignment(p[1], p[3])
 
 def p_add_assign(p):
-	"expr_assign : name add_equals expr_assign"
+	"expr_assign : l_expr add_equals expr_assign"
 	p[0] = ast.Assignment(p[1], ast.Add(ast.VariableRef(p[1]), p[3]))
 
 def p_sub_assign(p):
-	"expr_assign : name sub_equals expr_assign"
+	"expr_assign : l_expr sub_equals expr_assign"
 	p[0] = ast.Assignment(p[1], ast.Subtract(ast.VariableRef(p[1]), p[3]))
 
 def p_mul_assign(p):
-	"expr_assign : name mul_equals expr_assign"
+	"expr_assign : l_expr mul_equals expr_assign"
 	p[0] = ast.Assignment(p[1], ast.Multiply(ast.VariableRef(p[1]), p[3]))
 
 def p_no_assign(p):
@@ -297,6 +305,14 @@ def p_logical_not(p):
 	"expr_unary : not expr_unary"
 	p[0] = ast.LogicalNot(p[2])
 
+def p_increment(p):
+	"expr_unary : increment l_expr"
+	p[0] = ast.Increment(p[2])
+
+def p_decrement(p):
+	"expr_unary : decrement l_expr"
+	p[0] = ast.Decrement(p[2])
+
 def p_expr_v(p):
 	"expr_unary : expr_v"
 	p[0] = p[1]
@@ -317,6 +333,16 @@ def p_var(p):
 
 def p_brackets(p):
 	"expr_v : open_bracket expr close_bracket"
+	p[0] = p[2]
+
+# Left Expressions (may be assigned to)
+
+def p_l_name(p):
+	"l_expr : name"
+	p[0] = p[1]
+
+def p_l_brackets(p):
+	"l_expr : open_bracket l_expr close_bracket"
 	p[0] = p[2]
 
 def p_error(p):

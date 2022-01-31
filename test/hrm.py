@@ -13,6 +13,15 @@ class InboxError(Exception):
 MIN_VALUE = -999
 MAX_VALUE =  999
 
+def range_check(value):
+	if value < MIN_VALUE or value > MAX_VALUE:
+		raise BossError(
+				"Overflow! Each data unit is\n"
+				"restricted to values between\n"
+				f"{MIN_VALUE} and {MAX_VALUE}. "
+				"That should\n"
+				"be enough for anybody.")
+
 class Instruction:
 	def __repr__(self):
 		return type(self).__name__ + "()"
@@ -25,6 +34,14 @@ class Instruction:
 					"Empty value! You\n"
 					f"can't {self.name} with\n"
 					"empty hands!\n")
+
+	def not_letter_check(self, value):
+		if type(value) is str:
+			raise BossError(
+					f"You can't {self.name}"
+					"with a\n"
+					"letter! What would\n"
+					"that even mean?!")
 
 class ParameterisedInstruction(Instruction):
 	__slots__ = ["param"]
@@ -83,13 +100,11 @@ class Add(ParameterisedInstruction):
 		self.empty_hands_check(office)
 
 		value = office.floor[self.param]
-		if type(value) is str or type(office.hands) is str:
-			raise BossError(
-					"You can't ADD with a\n"
-					"letter! What would\n"
-					"that even mean?!")
+		self.not_letter_check(value)
+		self.not_letter_check(office.hands)
 
 		office.hands += value
+		range_check(office.hands)
 
 class Sub(ParameterisedInstruction):
 	name = mnemonic = "SUB"
@@ -102,6 +117,7 @@ class Sub(ParameterisedInstruction):
 
 		if type(subtrahend) is int and type(office.hands) is int:
 			office.hands -= subtrahend
+			range_check(office.hands)
 
 		elif type(subtrahend) is str and type(office.hands) is str:
 			office.hands = ord(office.hands.upper()) - ord(subtrahend.upper())
@@ -113,6 +129,31 @@ class Sub(ParameterisedInstruction):
 					"letter and one number is invalid.\n"
 					"Only nice respectable pairs of two\n"
 					"letters or two numbers allowed.")
+
+class AbstractBump(ParameterisedInstruction):
+	# Expects 'offset' property to be set to the value which this instruction
+	# adds to the specified memory location.
+
+	def execute(self, office):
+		self.empty_floor_check(office)
+
+		val = office.floor[self.param]
+		self.not_letter_check(val)
+		val += self.offset
+		range_check(val)
+
+		office.floor[self.param] = val
+		office.hands = val
+
+class BumpUp(AbstractBump):
+	mnemonic = "BUMPUP"
+	name = "BUMP+"
+	offset = 1
+
+class BumpDown(AbstractBump):
+	mnemonic = "BUMPDN"
+	name = "BUMP-"
+	offset = -1
 
 class AbstractJump(ParameterisedInstruction):
 	# Perform the jump, without checking an conditions
@@ -280,6 +321,10 @@ def load_program(path, initial_floor=[]):
 				program.append(Add(validate_floor_addr(param, floor_size, lineno)))
 			elif instr == "SUB":
 				program.append(Sub(validate_floor_addr(param, floor_size, lineno)))
+			elif instr == "BUMPUP":
+				program.append(BumpUp(validate_floor_addr(param, floor_size, lineno)))
+			elif instr == "BUMPDN":
+				program.append(BumpDown(validate_floor_addr(param, floor_size, lineno)))
 			elif instr == "JUMP":
 				program.append(Jump(param))
 			elif instr == "JUMPZ":

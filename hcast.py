@@ -600,7 +600,7 @@ class AbstractAdditiveOperator(AbstractBinaryOperator):
 			return (self.left, injected_stmts)
 
 		if not self.negate_right_operand and is_zero(self.left):
-			return (self.left, injected_stmts)
+			return (self.right, injected_stmts)
 
 		if not self.pseudo and isinstance(self.right, VariableRef):
 			return (None, injected_stmts)
@@ -623,7 +623,7 @@ class AbstractAdditiveOperator(AbstractBinaryOperator):
 			negate_c = self.negate_right_operand != self.right.negate_right_operand
 
 			l_expr = (Subtract if negate_b else Add)(a,      b)
-			expr   = (Subtract if negate_b else Add)(l_expr, c)
+			expr   = (Subtract if negate_c else Add)(l_expr, c)
 
 			expr, rot_stmts = validate_expr(expr, namespace)
 			injected_stmts.extend(rot_stmts)
@@ -909,6 +909,35 @@ class Multiply(AbstractBinaryOperator):
 
 		raise HCTypeError("Unable to multiply", self.left, "with", self.right)
 
+# Abstract class for both increment and decrement
+class AbstractIncrement(AbstractExpr):
+	__slots__ = [
+		"name",
+	]
+
+	def __init__(self, name):
+		self.name = name
+
+	def get_namespace(self):
+		return Namespace(self.name)
+
+	def validate(self, namespace):
+		return (None, None)
+
+	def __repr__(self):
+		return (type(self).__name__ + "("
+			+ repr(self.name) + ")")
+
+# Prefix increment
+class Increment(AbstractIncrement):
+	def add_to_block(self, block):
+		block.add_instruction(hrmi.BumpUp(self.name))
+
+# Prefix decrement
+class Decrement(AbstractIncrement):
+	def add_to_block(self, block):
+		block.add_instruction(hrmi.BumpDown(self.name))
+
 class AbstractEqualityOperator(AbstractBinaryOperator):
 	hctype = Boolean
 
@@ -1123,9 +1152,9 @@ class CompareGe(AbstractInequalityOperator):
 		return CompareLe(self.right, self.left)
 
 class LogicalNot(AbstractExpr):
-	__slots = (
+	__slots = [
 		"operand",
-	)
+	]
 
 	def __init__(self, operand):
 		self.operand = operand

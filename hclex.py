@@ -31,7 +31,9 @@ tokens = (
 	"GREATER_THAN_OR_EQUAL",
 	"AT",
 	"ADD",
+	"DBL_ADD",
 	"SUBTRACT",
+	"DBL_SUB",
 	"MULTIPLY",
 	"OPEN_BRACKET",
 	"CLOSE_BRACKET",
@@ -131,12 +133,20 @@ def t_ADD_EQUALS(t):
 	r"\+="
 	return track(t)
 
+def t_DBL_ADD(t):
+	r"\+\+"
+	return track(t)
+
 def t_ADD(t):
 	r"\+"
 	return track(t)
 
 def t_SUB_EQUALS(t):
 	r"-="
+	return track(t)
+
+def t_DBL_SUB(t):
+	r"--"
 	return track(t)
 
 def t_SUBTRACT(t):
