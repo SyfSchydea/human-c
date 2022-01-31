@@ -288,5 +288,42 @@ class TestYear17(AbstractTests.TestValidProgram):
 			([ 5,  3,  4, -4, -9,  6, -9, -7], [0, 1, 1, 0]),
 		])
 
+class TestYear19(AbstractTests.TestValidProgram):
+	source_path = "solutions/y19-countdown.hc"
+	floor_size = 10
+
+	@staticmethod
+	def get_expected_outbox(inbox):
+		outbox = []
+
+		for x in inbox:
+			outbox.append(x)
+			while x != 0:
+				if x > 0:
+					x -= 1
+				else:
+					x += 1
+
+				outbox.append(x)
+
+		return outbox
+
+	def test_solution(self):
+		self.run_tests_auto([
+			[8, -6, 0,  1],
+			[4, -8, 0,  3],
+			[8, -6, 0, -4],
+		])
+
+	def test_extended(self):
+		self.run_tests_auto([
+			[],
+			[  5],
+			[  4,   2,  0],
+			[ -9,   8, -7,  6],
+			[  0,   0,  0,  0],
+			[-14, -10,  8, -3],
+		])
+
 if __name__ == "__main__":
 	unittest.main()
