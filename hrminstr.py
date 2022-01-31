@@ -137,6 +137,13 @@ class BumpUp(AbstractParameterisedInstruction):
 	def simulate_hands(self, hands):
 		hands.replace_constraints(VariableInHands(self.loc))
 
+class BumpDown(AbstractParameterisedInstruction):
+	mnemonic = "BUMPDN"
+	reads_variable = True
+
+	def simulate_hands(self, hands):
+		hands.replace_constraints(VariableInHands(self.loc))
+
 # Instruction which represents an action in the code which could not be
 # expanded into correct code at the initial code generation stage.
 # Pseudo instructions may be able to be expanded into correct code

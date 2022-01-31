@@ -103,6 +103,10 @@ def p_operator_subtract(p):
 	"subtract : SUBTRACT optws"
 	pass
 
+def p_operator_decrement(p):
+	"decrement : DBL_SUB optws"
+	pass
+
 def p_operator_multiply(p):
 	"multiply : MULTIPLY optws"
 	pass
@@ -304,6 +308,10 @@ def p_logical_not(p):
 def p_increment(p):
 	"expr_unary : increment l_expr"
 	p[0] = ast.Increment(p[2])
+
+def p_decrement(p):
+	"expr_unary : decrement l_expr"
+	p[0] = ast.Decrement(p[2])
 
 def p_expr_v(p):
 	"expr_unary : expr_v"

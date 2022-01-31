@@ -909,8 +909,8 @@ class Multiply(AbstractBinaryOperator):
 
 		raise HCTypeError("Unable to multiply", self.left, "with", self.right)
 
-# Prefix increment
-class Increment(AbstractExpr):
+# Abstract class for both increment and decrement
+class AbstractIncrement(AbstractExpr):
 	__slots__ = [
 		"name",
 	]
@@ -924,12 +924,19 @@ class Increment(AbstractExpr):
 	def validate(self, namespace):
 		return (None, None)
 
-	def add_to_block(self, block):
-		block.add_instruction(hrmi.BumpUp(self.name))
-
 	def __repr__(self):
 		return (type(self).__name__ + "("
 			+ repr(self.name) + ")")
+
+# Prefix increment
+class Increment(AbstractIncrement):
+	def add_to_block(self, block):
+		block.add_instruction(hrmi.BumpUp(self.name))
+
+# Prefix decrement
+class Decrement(AbstractIncrement):
+	def add_to_block(self, block):
+		block.add_instruction(hrmi.BumpDown(self.name))
 
 class AbstractEqualityOperator(AbstractBinaryOperator):
 	hctype = Boolean
