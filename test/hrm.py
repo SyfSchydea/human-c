@@ -130,20 +130,30 @@ class Sub(ParameterisedInstruction):
 					"Only nice respectable pairs of two\n"
 					"letters or two numbers allowed.")
 
-class BumpUp(ParameterisedInstruction):
-	mnemonic = "BUMPUP"
-	name = "BUMP+"
+class AbstractBump(ParameterisedInstruction):
+	# Expects 'offset' property to be set to the value which this instruction
+	# adds to the specified memory location.
 
 	def execute(self, office):
 		self.empty_floor_check(office)
 
 		val = office.floor[self.param]
 		self.not_letter_check(val)
-		val += 1
+		val += self.offset
 		range_check(val)
 
 		office.floor[self.param] = val
 		office.hands = val
+
+class BumpUp(AbstractBump):
+	mnemonic = "BUMPUP"
+	name = "BUMP+"
+	offset = 1
+
+class BumpDown(AbstractBump):
+	mnemonic = "BUMPDN"
+	name = "BUMP-"
+	offset = -1
 
 class AbstractJump(ParameterisedInstruction):
 	# Perform the jump, without checking an conditions
@@ -313,6 +323,8 @@ def load_program(path, initial_floor=[]):
 				program.append(Sub(validate_floor_addr(param, floor_size, lineno)))
 			elif instr == "BUMPUP":
 				program.append(BumpUp(validate_floor_addr(param, floor_size, lineno)))
+			elif instr == "BUMPDN":
+				program.append(BumpDown(validate_floor_addr(param, floor_size, lineno)))
 			elif instr == "JUMP":
 				program.append(Jump(param))
 			elif instr == "JUMPZ":
