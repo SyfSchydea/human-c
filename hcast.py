@@ -599,6 +599,18 @@ class AbstractAdditiveOperator(AbstractBinaryOperator):
 		if is_zero(self.right):
 			return (self.left, injected_stmts)
 
+		# Handle a single constant value
+		if isinstance(self.left, Number) and self.commutative:
+			self.left, self.right = self.right, self.left
+		if isinstance(self.right, Number) and not self.pseudo:
+			added_name = namespace.get_unique_name()
+			injected_stmts.append(ExprLine(Assignment(added_name, self.left)))
+			injected_stmts.extend(ExprLine(
+					(Decrement if self.negate_right_operand
+						else Increment)(added_name))
+					for _ in range(self.right.value))
+			return (VariableRef(added_name), injected_stmts)
+
 		if not self.negate_right_operand and is_zero(self.left):
 			return (self.right, injected_stmts)
 

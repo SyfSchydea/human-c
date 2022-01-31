@@ -410,3 +410,21 @@ class TestZeroPlusExpr(AbstractTests.TestEcho):
 	# This tests for expansion of the expression (0 + x).
 	# An issue with this was identified in issue #22
 	source_path = "misc/zero-plus-expr.hc"
+
+class TestAddVarConst(AbstractTests.TestValidProgram):
+	source_path = "misc/add-var-const.hc"
+	floor_size = 16
+
+	# This program tests addition of a variable and a
+	# constant value.
+	def test_output(self):
+		self.run_tests([
+			([], []),
+			([ 7], [8]),
+			([17, 14], [18, 15]),
+			([13, 11,  14], [14, 12, 15]),
+			([12,  4,  20,  11], [13, 5, 21, 12]),
+			([11,  6,  12,  13,  2], [12, 7,  13,  14,  3]),
+			([-1, -6, -11, -19, -9], [0, -5, -10, -18, -8]),
+			([ 8,  9,   0,   4, -9], [9, 10,   1,   5, -8]),
+		])
