@@ -57,10 +57,12 @@ def optimise_hands_tracking(blocks):
 		# Propagate through both possible paths of the conditional jump
 		if blk.conditional is not None:
 			cond_hands = hands.clone()
-			blk.conditional.simulate_hands(cond_hands)
+			blk.conditional.simulate_hands_pass(cond_hands)
 			cond_block = blk.conditional.dest
 			cond_block.update_hands(cond_hands)
 			blocks_to_check.append(cond_block)
+			
+			blk.conditional.simulate_hands_fail(hands)
 
 		# Propagate through the unconditional
 		if blk.next is not None:
@@ -92,6 +94,17 @@ def optimise_hands_tracking(blocks):
 
 			instr.simulate_hands(hands)
 			i += 1
+
+		cjump = blk.conditional
+		if cjump is None:
+			continue
+
+		# Check if the conditional jump will always fail or always pass
+		if cjump.redundant_fails(hands):
+			blk.unlink_conditional()
+		elif cjump.redundant_passes(hands):
+			blk.next.redirect(cjump.dest)
+			blk.unlink_conditional()
 
 def memory_map_contains(memory_map, var_name):
 	for memloc in memory_map:

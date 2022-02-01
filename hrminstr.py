@@ -300,6 +300,13 @@ class Block:
 	def assign_jn(self, next_block):
 		self._assign_conditional(JumpNegative(self, next_block))
 
+	# Remove the conditional jump from the block
+	def unlink_conditional(self):
+		jmp = self.conditional
+		jmp.unlink_dest()
+		self.conditional = None
+		return jmp
+
 	def register_jump_in(self, jump):
 		self.jumps_in.append(jump)
 
@@ -388,12 +395,22 @@ class AbstractJump(HRMInstruction):
 
 		dest.register_jump_in(self)
 
-	def redirect(self, new_dest):
+	# Remove the jump from its destination
+	def unlink_dest(self):
 		self.dest.unregister_jump_in(self)
+		self.dest = None
+
+	def redirect(self, new_dest):
+		self.unlink_dest()
 		self.dest = new_dest
 		new_dest.register_jump_in(self)
 
-	def simulate_hands(self, hands):
+	# Calculate constraints on the hands when this (conditional) jump passes
+	def simulate_hands_pass(self, hands):
+		pass
+
+	# Calculate constraints on the hands when this (conditional) jump passes
+	def simulate_hands_fail(self, hands):
 		pass
 
 	def __repr__(self):
@@ -418,12 +435,35 @@ class JumpZero(AbstractJump):
 	def to_asm(self):
 		return "JUMPZ " + self.dest.label
 
-	def simulate_hands(self, hands):
+	def simulate_hands_pass(self, hands):
 		hands.add_constraint(ValueInHands(0))
+
+	def simulate_hands_fail(self, hands):
+		hands.add_constraint(ValueNotInHands(0))
+
+	# Check if this jump is guaranteed to fail given the state of the hands
+	def redundant_fails(self, hands):
+		value = hands.get_value_in_hands()
+		return ((value is not None and value != 0)
+				or 0 in hands.get_values_not_in_hands())
+
+	# Check if this jump is guaranteed to pass given the state of the hands
+	def redundant_passes(self, hands):
+		return hands.get_value_in_hands() == 0
 
 class JumpNegative(AbstractJump):
 	def to_asm(self):
 		return "JUMPN " + self.dest.label
+
+	# Check if this jump is guaranteed to fail given the state of the hands
+	def redundant_fails(self, hands):
+		value = hands.get_value_in_hands()
+		return value is not None and value >= 0
+
+	# Check if this jump is guaranteed to pass given the state of the hands
+	def redundant_passes(self, hands):
+		value = hands.get_value_in_hands()
+		return value is not None and value < 0
 
 # Pseudo blocks used to represent the multiple blocks involved
 # in control flow statements such as 'forever', or 'if'
@@ -516,14 +556,14 @@ class VariableInHands(AbstractHandsConstraint):
 	def __repr__(self):
 		return type(self).__name__ + "(" + repr(self.name) + ")"
 
-# The processor is holding a specific, constant value
-class ValueInHands(AbstractHandsConstraint):
-	CONSTRAINT_ID = 2
-
+class AbstractValueConstraint(AbstractHandsConstraint):
 	__slots__ = ["value"]
 
 	def __init__(self, value):
 		self.value = value
+
+	def __hash__(self):
+		return hash((self.CONSTRAINT_ID, self.value))
 
 	def __eq__(self, other):
 		super_result = super().__eq__(other)
@@ -532,11 +572,16 @@ class ValueInHands(AbstractHandsConstraint):
 
 		return other.value == self.value
 
-	def __hash__(self):
-		return hash((self.CONSTRAINT_ID, self.value))
-
 	def __repr__(self):
 		return type(self).__name__ + "(" + repr(self.value) + ")"
+
+# The processor is holding a specific, constant value
+class ValueInHands(AbstractValueConstraint):
+	CONSTRAINT_ID = 2
+
+# The processor cannot be holding a specific value
+class ValueNotInHands(AbstractValueConstraint):
+	CONSTRAINT_ID = 3
 
 # Holds a set of zero or more constraints about the processor's
 # hands at a particular point in execution
@@ -571,6 +616,27 @@ class HandsState:
 				return constraint.name
 
 		return None
+
+	# Fetch the value currently guaranteed to be on hand.
+	# If a specific value is not known, return None.
+	def get_value_in_hands(self):
+		for constraint in self.constraints:
+			if isinstance(constraint, ValueInHands):
+				return constraint.value
+
+		return None
+
+	# Fetch a set of values guaranteed not to be in hands.
+	# Note that this does not include values excluded by a ValueInHands
+	# constraint, only those excluded by ValueNotInHands constraints.
+	def get_values_not_in_hands(self):
+		excluded_values = set()
+
+		for constraint in self.constraints:
+			if isinstance(constraint, ValueNotInHands):
+				excluded_values.add(constraint.value)
+
+		return excluded_values
 
 	def clone(self):
 		return HandsState(self.constraints)
