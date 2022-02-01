@@ -428,3 +428,7 @@ class TestAddVarConst(AbstractTests.TestValidProgram):
 			([-1, -6, -11, -19, -9], [0, -5, -10, -18, -8]),
 			([ 8,  9,   0,   4, -9], [9, 10,   1,   5, -8]),
 		])
+
+class TestBooleanLiteral(AbstractTests.TestEcho):
+	# This file tests use of boolean literal keywords.
+	source_path = "misc/boolean-literal.hc"
