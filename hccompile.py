@@ -133,47 +133,81 @@ def optimise_variable_needs(blocks, memory_map):
 def rename_variable(blocks, old_name, new_name):
 	for block in blocks:
 		for instr in block.instructions:
+			if instr.needs_variable(old_name):
+				instr.mark_variable_used(new_name)
+
 			if not isinstance(instr, hrmi.AbstractParameterisedInstruction):
 				continue
 			if instr.loc == old_name:
 				instr.loc = new_name
 
+# Class used to track which variables are used alongside which others.
+class VariableUseTracker:
+	__slots__ = [
+		# Set of sorted tuples of pairs of variables
+		# which are used simultaneously.
+		"used",
+
+		# Set of each unique variable seen
+		"unique_vars",
+	]
+
+	def __init__(self):
+		self.used = set()
+		self.unique_vars = set()
+
+	def _mk_key(self, var_a, var_b):
+		return tuple(sorted((var_a, var_b)))
+
+	def mark_used(self, var_a, var_b):
+		self.used.add(self._mk_key(var_a, var_b))
+
+	def are_used(self, var_a, var_b):
+		if var_a == var_b:
+			return True
+
+		return self._mk_key(var_a, var_b) in self.used
+
+	def add_var(self, var):
+		self.unique_vars.add(var)
+
+	def get_unique(self):
+		return iter(self.unique_vars)
+
+	def __repr__(self):
+		return type(self).__name__ + "(" + repr(self.used) + ")"
+
 # Merge variables which are never required to hold
-# their values simoultaneously.
+# their values simultaneously.
 # Variables which may be merged in this way
 # will be renamed to share the same name.
 # Relies on variable use data being stored by record_variable_use first.
 def merge_disjoint_variables(blocks, namespace, memory_map):
-	# Create 2d array to track which pairs of variables
-	# are used simoultaneously
-	# (Using the term "array" very loosely here)
-	variables_mergable = {
-		v: {
-			v: True for v in namespace.names
-		} for v in namespace.names
-	}
+	# Create data structure to track which pairs
+	# of variables are used simultaneously
+	var_use = VariableUseTracker()
 
 	# Iterate through each instruction in the whole program
 	for block in blocks:
 		for instr in block.instructions:
 			# Check if two or more variables are used during this instruction
-			vars_used = list(instr.variables_used)
-			for i in range(len(vars_used)):
-				var1 = vars_used[i]
-				for j in range(i + 1, len(vars_used)):
-					var2 = vars_used[j]
+			instr_vars = list(instr.variables_used)
+			for i in range(len(instr_vars)):
+				var1 = instr_vars[i]
+				var_use.add_var(var1)
+				for j in range(i + 1, len(instr_vars)):
+					var2 = instr_vars[j]
 
 					# If so, mark the variables as unmergable in the array
-					variables_mergable[var1][var2] = False
-					variables_mergable[var2][var1] = False
+					var_use.mark_used(var1, var2)
 
 	# Look through the array for any mergable pairs of variables
-	for var1, row in variables_mergable.items():
+	for var1 in var_use.get_unique():
 		if memory_map_contains(memory_map, var1):
 			continue
 
-		for var2, mergable in row.items():
-			if var1 == var2 or not mergable:
+		for var2 in var_use.get_unique():
+			if var_use.are_used(var1, var2):
 				continue
 
 			# Rename instances of the first to match the second
@@ -183,16 +217,14 @@ def merge_disjoint_variables(blocks, namespace, memory_map):
 			for var3 in namespace.names:
 				# Any variables which var1 couldn't merge
 				# with, var2 now can't merge with either.
-				if not variables_mergable[var1][var3]:
-					variables_mergable[var2][var3] = False
-					variables_mergable[var3][var2] = False
+				if var_use.are_used(var1, var3):
+					var_use.mark_used(var2, var3)
 
 				# var1 can no longer merge with anything,
 				# because it doesn't exist anymore
-				variables_mergable[var1][var3] = False
-				variables_mergable[var3][var1] = False
+				var_use.mark_used(var1, var3)
 
-			variables_mergable[var2][var1] = False
+			var_use.mark_used(var1, var2)
 
 # Removes blocks which are simply a trivial redirect to another block
 def collapse_redundant_blocks(blocks):
@@ -299,8 +331,9 @@ def main():
 			blocks.remove(end_block)
 			blocks.append(end_block)
 
-		optimise_hands_tracking(blocks)
 		record_variable_use(blocks, initial_memory_map)
+		merge_disjoint_variables(blocks, namespace, initial_memory_map)
+		optimise_hands_tracking(blocks)
 	except HCTypeError as e:
 		print(e, file=sys.stderr)
 		return 1
@@ -309,7 +342,6 @@ def main():
 
 	collapse_redundant_blocks(blocks)
 
-	merge_disjoint_variables(blocks, namespace, initial_memory_map)
 	assign_memory(blocks, initial_memory_map)
 
 	mark_implicit_jumps(blocks)
