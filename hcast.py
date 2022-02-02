@@ -474,25 +474,28 @@ class Primitive(AbstractExpr):
 	def get_type(cls):
 		return cls
 
-	def __repr__(self):
-		return (type(self).__name__ + "(" + repr(self.value) + ")")
-
-class Number(Primitive):
-	def add_to_block(self, block):
-		block.add_instruction(hrmi.LoadConstant(self.value))
-
-	def validate(self, namespace):
-		return (None, None)
+	def get_namespace(self):
+		return Namespace()
 
 	def has_side_effects(self):
 		return False
 
-	def get_namespace(self):
-		return Namespace()
+	def __repr__(self):
+		return (type(self).__name__ + "(" + repr(self.value) + ")")
+
+class Number(Primitive):
+	def validate(self, namespace):
+		return (None, None)
+
+	def add_to_block(self, block):
+		block.add_instruction(hrmi.LoadConstant(self.value))
 
 # Boolean value.
 # Currently not directly producable by the source code
 class Boolean(Primitive):
+	def validate_branchable(self, namespace):
+		return (None, None)
+
 	def create_branch_block(self, then_block, else_block, lineno=None):
 		block = then_block if self.value else else_block
 		return hrmi.CompoundBlock(

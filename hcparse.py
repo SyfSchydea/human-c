@@ -71,6 +71,16 @@ def p_keyword_input(p):
 	"input : INPUT optws"
 	pass
 
+def p_keyword_true(p):
+	"true : TRUE optws"
+	pass
+
+def p_keyword_false(p):
+	"false : FALSE optws"
+	pass
+
+# Operators
+
 def p_operator_at(p):
 	"at : AT optws"
 	pass
@@ -330,6 +340,14 @@ def p_num(p):
 def p_var(p):
 	"expr_v : name"
 	p[0] = ast.VariableRef(p[1])
+
+def p_true(p):
+	"expr_v : true"
+	p[0] = ast.Boolean(True)
+
+def p_false(p):
+	"expr_v : false"
+	p[0] = ast.Boolean(False)
 
 def p_brackets(p):
 	"expr_v : open_bracket expr close_bracket"
