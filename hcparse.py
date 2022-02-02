@@ -177,7 +177,11 @@ def p_number(p):
 
 def p_declare_init(p):
 	"stmt : init name at number"
-	p[0] = ast.InitialValueDeclaration(p[2], p[4])
+	p[0] = ast.InitialValueDeclaration(p[4], name=p[2])
+
+def p_declare_init_with_value(p):
+	"stmt : init name equals number at number"
+	p[0] = ast.InitialValueDeclaration(p[6], name=p[2], value=p[4])
 
 def p_forever(p):
 	"stmt : forever"
