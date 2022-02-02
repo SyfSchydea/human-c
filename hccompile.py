@@ -344,9 +344,9 @@ def main():
 			blocks.remove(end_block)
 			blocks.append(end_block)
 
+		optimise_hands_tracking(blocks)
 		record_variable_use(blocks, initial_memory_map)
 		merge_disjoint_variables(blocks, namespace, initial_memory_map)
-		optimise_hands_tracking(blocks)
 	except HCTypeError as e:
 		print(e, file=sys.stderr)
 		return 1
