@@ -325,5 +325,32 @@ class TestYear19(AbstractTests.TestValidProgram):
 			[-14, -10,  8, -3],
 		])
 
+class TestYear20(AbstractTests.TestValidProgram):
+	source_path = "solutions/y20-multiplication-workshop.hc"
+
+	initial_memory = [
+		None, None, None, None, None,
+		None, None, None, None, 0,
+	]
+
+	def test_solution(self):
+		self.run_tests([
+			([7, 3, 7, 3, 8, 0, 0, 6, 7, 6], [21, 21, 0, 0, 42]),
+			([7, 3, 3, 5, 8, 0, 0, 2, 4, 1], [21, 15, 0, 0,  4]),
+			([5, 2, 4, 4, 6, 0, 0, 8, 5, 6], [10, 16, 0, 0, 30]),
+			([6, 4, 7, 9, 5, 0, 0, 1, 7, 7], [24, 63, 0, 0, 49]),
+		])
+
+	def test_extended(self):
+		self.run_tests([
+			([], []),
+			([ 1,  6], [6]),
+			([10,  9, 13, 13], [90, 169]),
+			([ 3, 11,  6,  1, 14,  7], [33, 6, 98]),
+			([ 2, 18, 11,  5,  5,  4,  9,  8], [36, 55, 20, 72]),
+			([ 7,  8, 14,  9,  7,  1, 12, 11, 14, 10], [56, 126, 7, 132, 140]),
+			([ 1,  1, 13,  0,  0, 12,  0,  0,  1,  0], [ 1,   0, 0,   0,   0]),
+		])
+
 if __name__ == "__main__":
 	unittest.main()
