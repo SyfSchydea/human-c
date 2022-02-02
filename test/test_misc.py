@@ -432,3 +432,14 @@ class TestAddVarConst(AbstractTests.TestValidProgram):
 class TestBooleanLiteral(AbstractTests.TestEcho):
 	# This file tests use of boolean literal keywords.
 	source_path = "misc/boolean-literal.hc"
+
+class TestInitialValue(AbstractTests.TestValidProgram):
+	source_path = "misc/load-init-val.hc"
+	initial_memory = [None] * 15 + [0]
+
+	def test_zero(self):
+		self.run_tests([
+			([], [0]),
+			([9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9], [0]),
+			([*"ZHUZH"], [0]),
+		])
