@@ -443,3 +443,14 @@ class TestInitialValue(AbstractTests.TestValidProgram):
 			([9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9], [0]),
 			([*"ZHUZH"], [0]),
 		])
+
+class TestInitialNoName(AbstractTests.TestValidProgram):
+	source_path = "misc/init-no-name.hc"
+	initial_memory = [None] * 15 + [0]
+
+	def test_zero(self):
+		self.run_tests([
+			([], [0]),
+			([9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9], [0]),
+			([*"ZHUZH"], [0]),
+		])
