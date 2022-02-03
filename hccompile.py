@@ -40,9 +40,14 @@ def extract_blocks(stmt_list):
 
 # Optimise code by tracking what the state of the
 # office will be at each stage in the code.
-def optimise_state_tracking(blocks):
+def optimise_state_tracking(blocks, initial_memory):
 	# First, ensure all state_at_start values are accurate
-	blocks[0].update_state(hrmi.OfficeState([hrmi.EmptyHands()]))
+	state = hrmi.OfficeState([hrmi.EmptyHands()])
+	for mem in initial_memory:
+		if mem.value is not None:
+			state.add_constraint(hrmi.VariableHasValue(mem.name, mem.value))
+
+	blocks[0].update_state(state)
 	blocks_to_check = [blocks[0]]
 
 	while len(blocks_to_check) > 0:
@@ -344,7 +349,7 @@ def main():
 			blocks.remove(end_block)
 			blocks.append(end_block)
 
-		optimise_state_tracking(blocks)
+		optimise_state_tracking(blocks, initial_memory_map)
 		record_variable_use(blocks, initial_memory_map)
 		merge_disjoint_variables(blocks, namespace, initial_memory_map)
 	except HCTypeError as e:

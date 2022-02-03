@@ -97,7 +97,7 @@ class InitialValueDeclaration(AbstractLine):
 		self.block = hrmi.Block(self.lineno)
 
 	def get_memory_map(self):
-		return (MemoryLocation(self.name, self.loc),)
+		return (MemoryLocation(self.name, self.loc, self.value),)
 
 	def __init__(self, loc, *, name, value=None):
 		super().__init__("")
@@ -126,6 +126,7 @@ class InitialValueDeclaration(AbstractLine):
 class MemoryLocation:
 	name: str
 	loc: int
+	value: int
 
 # Sequence of AbstractLine objects, to be run in order
 class StatementList:

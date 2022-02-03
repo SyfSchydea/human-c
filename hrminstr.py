@@ -98,6 +98,10 @@ class Save(AbstractParameterisedInstruction):
 		state.clear_variable_constraints(self.loc)
 		state.add_constraint(VariableInHands(self.loc))
 
+		val = state.get_value_in_hands()
+		if val is not None:
+			state.add_constraint(VariableHasValue(self.loc, val))
+
 	def state_redundant(self, state_before):
 		return state_before.has_constraint(VariableInHands(self.loc))
 
@@ -112,9 +116,15 @@ class Load(AbstractParameterisedInstruction):
 
 	def simulate_state(self, state):
 		var_in_hands = VariableInHands(self.loc)
+
 		if not state.has_constraint(var_in_hands):
 			state.clear_hand_constraints()
+
 		state.add_constraint(var_in_hands)
+
+		val = state.get_variable_value(self.loc)
+		if val is not None:
+			state.add_constraint(ValueInHands(val))
 
 	def state_redundant(self, state_before):
 		return state_before.has_constraint(VariableInHands(self.loc))
@@ -178,12 +188,17 @@ class LoadConstant(PseudoInstruction):
 	def state_redundant(self, state_before):
 		return state_before.has_constraint(ValueInHands(self.value))
 
-	def attempt_expand(self, hands):
-		if hands.has_constraint(ValueInHands(self.value)):
+	def attempt_expand(self, state):
+		hand_val = state.get_value_in_hands()
+		if hand_val == self.value:
 			return []
 
+		var_name = state.find_variable_with_value(self.value)
+		if var_name is not None:
+			return [Load(var_name)]
+
 		if self.value == 0:
-			var_in_hands = hands.get_variable_in_hands()
+			var_in_hands = state.get_variable_in_hands()
 			if var_in_hands is not None:
 				return [Subtract(var_in_hands)]
 
@@ -601,6 +616,34 @@ class ValueNotInHands(AbstractValueConstraint):
 	CONSTRAINT_ID = 3
 	constrains_hands = True
 
+class VariableHasValue(AbstractStateConstraint):
+	CONSTRAINT_ID = 4
+	constrains_variable = True
+
+	__slots__ = [
+		"name",
+		"value",
+	]
+
+	def __init__(self, name, value):
+		self.name = name
+		self.value = value
+
+	def __eq__(self, other):
+		super_result = super().__eq__(other)
+		if super_result != True:
+			return super_result
+
+		return self.value == other.value and self.name == other.name
+
+	def __hash__(self):
+		return hash((self.CONSTRAINT_ID, self.name, self.value))
+
+	def __repr__(self):
+		return (type(self).__name__ + "("
+				+ repr(self.name) + ", "
+				+ repr(self.value) + ")")
+
 # Holds a set of zero or more constraints about the processor's
 # hands at a particular point in execution
 class OfficeState:
@@ -663,6 +706,25 @@ class OfficeState:
 				excluded_values.add(constraint.value)
 
 		return excluded_values
+
+	# Fetch the value of the given variable or None if not known.
+	def get_variable_value(self, name):
+		for con in self.constraints:
+			if isinstance(con, VariableHasValue) and con.name == name:
+				return con.value
+
+		return None
+
+	# Find a variable which is guaranteed to have the given value.
+	# Even if multiple variables satisfy the
+	# requirement, only one will be returned.
+	# If no variables have the value, the function will return None.
+	def find_variable_with_value(self, value):
+		for con in self.constraints:
+			if isinstance(con, VariableHasValue) and con.value == value:
+				return con.name
+
+		return None
 
 	def clone(self):
 		return OfficeState(self.constraints)
