@@ -54,6 +54,9 @@ class HRMInstruction:
 	def var_redundant(self):
 		return False
 
+	def clear_variable_use(self):
+		self.variables_used.clear()
+
 class Input(HRMInstruction):
 	def to_asm(self):
 		return "INBOX"
@@ -353,6 +356,10 @@ class Block:
 		if worst_state != self.state_at_start:
 			self.state_at_start = worst_state
 			self.state_data_propagated = False
+
+	def clear_variable_use(self):
+		for instr in self.instructions:
+			instr.clear_variable_use()
 
 	# Mark instructions as using the given variable names
 	# Propagation works backwards until it finds an instruction

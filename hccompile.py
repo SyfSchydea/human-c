@@ -124,6 +124,9 @@ def memory_map_contains(memory_map, var_name):
 # that variable is in use.
 def record_variable_use(blocks, memory_map):
 	for blk in blocks:
+		blk.clear_variable_use()
+
+	for blk in blocks:
 		for i in range(len(blk.instructions)):
 			instr = blk.instructions[i]
 
@@ -138,6 +141,8 @@ def record_variable_use(blocks, memory_map):
 # Any instances of a variable's value being set when
 # it isn't going to be used again may be removed.
 def optimise_variable_needs(blocks, memory_map):
+	record_variable_use(blocks, memory_map)
+
 	for blk in blocks:
 		i = 0
 		while i < len(blk.instructions):
@@ -199,8 +204,9 @@ class VariableUseTracker:
 # their values simultaneously.
 # Variables which may be merged in this way
 # will be renamed to share the same name.
-# Relies on variable use data being stored by record_variable_use first.
 def merge_disjoint_variables(blocks, namespace, memory_map):
+	record_variable_use(blocks, memory_map)
+
 	# Create data structure to track which pairs
 	# of variables are used simultaneously
 	var_use = VariableUseTracker()
@@ -349,9 +355,8 @@ def main():
 			blocks.remove(end_block)
 			blocks.append(end_block)
 
-		optimise_state_tracking(blocks, initial_memory_map)
-		record_variable_use(blocks, initial_memory_map)
 		merge_disjoint_variables(blocks, namespace, initial_memory_map)
+		optimise_state_tracking(blocks, initial_memory_map)
 	except HCTypeError as e:
 		print(e, file=sys.stderr)
 		return 1
