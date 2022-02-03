@@ -6,7 +6,7 @@
 // worry about negative numbers
 // for now.
 
-init zero @ 9
+init 0 @ 9
 
 forever
 	count = input
@@ -18,7 +18,7 @@ forever
 		x = count
 		count = tmp
 
-	product = zero
+	product = 0
 	while count > 0
 		product += x
 		count -= 1
