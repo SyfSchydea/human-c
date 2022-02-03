@@ -136,12 +136,29 @@ def record_variable_use(blocks, memory_map):
 			blk.back_propagate_variable_use(i, instr.loc,
 					memory_map_contains(memory_map, instr.loc))
 
+# Similar to record_variable_use, but tracks when the values stored in the hands
+# are needed.
+def record_hand_use(blocks):
+	for blk in blocks:
+		blk.clear_hand_use()
+
+	for blk in blocks:
+		for i, instr in enumerate(blk.instructions):
+			if not instr.reads_hands:
+				continue
+
+			blk.back_propagate_hands_use(i)
+
+		if blk.conditional is not None:
+			blk.back_propagate_hands_use(-1)
+
 # Optimise code by tracking where variables are actually
 # used, and when their value is last set.
 # Any instances of a variable's value being set when
 # it isn't going to be used again may be removed.
 def optimise_variable_needs(blocks, memory_map):
 	record_variable_use(blocks, memory_map)
+	record_hand_use(blocks)
 
 	for blk in blocks:
 		i = 0

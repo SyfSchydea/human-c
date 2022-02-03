@@ -14,16 +14,24 @@ class HRMInstruction:
 	# the value, but still rely on a value already being set.
 	writes_variable = False
 
+	# These two follow the same rules as (reads|writes)_variable, but applying
+	# to values read from or written to the hands.
+	reads_hands = False
+	writes_hands = False
+
 	__slots__ = [
 		# Set of variables used during this instruction.
 		# These variables are not necessarily used directly by this
 		# instruction, but their values must be held during the execution
 		# of this instruction.
 		"variables_used",
+
+		"needs_hands",
 	]
 
 	def __init__(self):
 		self.variables_used = set()
+		self.needs_hands = False
 
 	def to_asm(self):
 		raise NotImplementedError("HRMInstruction.to_asm", self)
@@ -58,6 +66,8 @@ class HRMInstruction:
 		self.variables_used.clear()
 
 class Input(HRMInstruction):
+	writes_hands = True
+
 	def to_asm(self):
 		return "INBOX"
 
@@ -68,6 +78,8 @@ class Input(HRMInstruction):
 		return "hrmi.Input()"
 
 class Output(HRMInstruction):
+	reads_hands = True
+
 	def to_asm(self):
 		return "OUTBOX"
 
@@ -96,6 +108,7 @@ class AbstractParameterisedInstruction(HRMInstruction):
 class Save(AbstractParameterisedInstruction):
 	mnemonic = "COPYTO"
 	writes_variable = True
+	reads_hands = True
 
 	def simulate_state(self, state):
 		state.clear_variable_constraints(self.loc)
@@ -116,6 +129,7 @@ class Save(AbstractParameterisedInstruction):
 class Load(AbstractParameterisedInstruction):
 	mnemonic = "COPYFROM"
 	reads_variable = True
+	writes_hands = True
 
 	def simulate_state(self, state):
 		var_in_hands = VariableInHands(self.loc)
@@ -131,6 +145,9 @@ class Load(AbstractParameterisedInstruction):
 
 	def state_redundant(self, state_before):
 		return state_before.has_constraint(VariableInHands(self.loc))
+
+	def var_redundant(self):
+		return not self.needs_hands
 
 class Add(AbstractParameterisedInstruction):
 	mnemonic = "ADD"
@@ -149,6 +166,7 @@ class Subtract(AbstractParameterisedInstruction):
 class BumpUp(AbstractParameterisedInstruction):
 	mnemonic = "BUMPUP"
 	reads_variable = True
+	writes_hands = True
 
 	def simulate_state(self, state):
 		state.clear_hand_constraints()
@@ -158,6 +176,7 @@ class BumpUp(AbstractParameterisedInstruction):
 class BumpDown(AbstractParameterisedInstruction):
 	mnemonic = "BUMPDN"
 	reads_variable = True
+	writes_hands = True
 
 	def simulate_state(self, state):
 		state.clear_hand_constraints()
@@ -178,6 +197,8 @@ class PseudoInstruction(HRMInstruction):
 
 # Loads a constant value into the hands.
 class LoadConstant(PseudoInstruction):
+	writes_hands = True
+
 	__slots__ = ["value"]
 
 	def __init__(self, value):
@@ -213,6 +234,8 @@ class LoadConstant(PseudoInstruction):
 # Finds the difference between two variables.
 # May optionally be negated in order to produce more efficient code.
 class Difference(PseudoInstruction):
+	writes_hands = True
+
 	__slots__ = [
 		# Names of variables to compare
 		"left",
@@ -360,6 +383,10 @@ class Block:
 	def clear_variable_use(self):
 		for instr in self.instructions:
 			instr.clear_variable_use()
+	
+	def clear_hand_use(self):
+		for instr in self.instructions:
+			instr.needs_hands = False
 
 	# Mark instructions as using the given variable names
 	# Propagation works backwards until it finds an instruction
@@ -398,6 +425,24 @@ class Block:
 		for jmp in self.jumps_in:
 			jmp.src.back_propagate_variable_use(-1, var_name,
 					is_pre_initialised)
+
+	def back_propagate_hands_use(self, instr_idx):
+		if instr_idx < 0:
+			instr_idx = len(self.instructions) - 1
+
+		for i in range(instr_idx, -1, -1):
+			instr = self.instructions[i]
+
+			if instr.needs_hands:
+				return
+
+			instr.needs_hands = True
+
+			if instr.writes_hands:
+				return
+
+		for jmp in self.jumps_in:
+			jmp.src.back_propagate_hands_use(-1)
 
 	def get_entry_block(self):
 		return self
