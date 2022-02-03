@@ -39,60 +39,65 @@ def extract_blocks(stmt_list):
 	return blocks
 
 # Optimise code by tracking what the state of the
-# hands will be at each stage in the code.
-def optimise_hands_tracking(blocks):
-	# First, ensure all hands_at_start values are accurate
-	blocks[0].update_hands(hrmi.HandsState([hrmi.EmptyHands()]))
+# office will be at each stage in the code.
+def optimise_state_tracking(blocks, initial_memory):
+	# First, ensure all state_at_start values are accurate
+	state = hrmi.OfficeState([hrmi.EmptyHands()])
+	for mem in initial_memory:
+		if mem.value is not None:
+			state.add_constraint(hrmi.VariableHasValue(mem.name, mem.value))
+
+	blocks[0].update_state(state)
 	blocks_to_check = [blocks[0]]
 
 	while len(blocks_to_check) > 0:
 		blk = blocks_to_check.pop()
-		if blk.hand_data_propagated:
+		if blk.state_data_propagated:
 			continue
 
-		hands = blk.hands_at_start.clone()
+		state = blk.state_at_start.clone()
 		for instr in blk.instructions:
-			instr.simulate_hands(hands)
+			instr.simulate_state(state)
 
 		# Propagate through both possible paths of the conditional jump
 		if blk.conditional is not None:
-			cond_hands = hands.clone()
-			blk.conditional.simulate_hands_pass(cond_hands)
+			cond_state = state.clone()
+			blk.conditional.simulate_state_pass(cond_state)
 			cond_block = blk.conditional.dest
-			cond_block.update_hands(cond_hands)
+			cond_block.update_state(cond_state)
 			blocks_to_check.append(cond_block)
 			
-			blk.conditional.simulate_hands_fail(hands)
+			blk.conditional.simulate_state_fail(state)
 
 		# Propagate through the unconditional
 		if blk.next is not None:
 			next_block = blk.next.dest
-			next_block.update_hands(hands)
+			next_block.update_state(state)
 			blocks_to_check.append(next_block)
 
-		blk.hand_data_propagated = True
+		blk.state_data_propagated = True
 
-	# Make optimisations based on calculated hand data
+	# Make optimisations based on calculated state data
 	for blk in blocks:
-		hands = blk.hands_at_start.clone()
+		state = blk.state_at_start.clone()
 
 		i = 0
 		while i < len(blk.instructions):
 			instr = blk.instructions[i]
 
 			# Remove the instruction if it's redundant
-			if instr.hands_redundant(hands):
+			if instr.state_redundant(state):
 				del blk.instructions[i]
 				continue
 
 			# Expand pseudo instructions if possible
 			if isinstance(instr, hrmi.PseudoInstruction):
-				expanded = instr.attempt_expand(hands)
+				expanded = instr.attempt_expand(state)
 				if expanded is not None:
 					blk.instructions[i:i+1] = expanded
 					continue
 
-			instr.simulate_hands(hands)
+			instr.simulate_state(state)
 			i += 1
 
 		cjump = blk.conditional
@@ -100,9 +105,9 @@ def optimise_hands_tracking(blocks):
 			continue
 
 		# Check if the conditional jump will always fail or always pass
-		if cjump.redundant_fails(hands):
+		if cjump.redundant_fails(state):
 			blk.unlink_conditional()
-		elif cjump.redundant_passes(hands):
+		elif cjump.redundant_passes(state):
 			blk.next.redirect(cjump.dest)
 			blk.unlink_conditional()
 
@@ -344,7 +349,7 @@ def main():
 			blocks.remove(end_block)
 			blocks.append(end_block)
 
-		optimise_hands_tracking(blocks)
+		optimise_state_tracking(blocks, initial_memory_map)
 		record_variable_use(blocks, initial_memory_map)
 		merge_disjoint_variables(blocks, namespace, initial_memory_map)
 	except HCTypeError as e:
