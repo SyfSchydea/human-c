@@ -28,15 +28,15 @@ class HRMInstruction:
 	def to_asm(self):
 		raise NotImplementedError("HRMInstruction.to_asm", self)
 
-	# Work out the state of the processor's hands
+	# Work out the state of the office
 	# after completing this instruction.
-	def simulate_hands(self, hands):
-		raise NotImplementedError("HRMInstruction.simulate_hands", self)
+	def simulate_state(self, state):
+		raise NotImplementedError("HRMInstruction.simulate_state", self)
 
 	# Return true if the instruction is made redundant
-	# by the calculated hands state.
+	# by the calculated office state.
 	# This is false in the majority of cases
-	def hands_redundant(self, hands_before):
+	def state_redundant(self, state_before):
 		return False
 
 	def mark_variable_used(self, name):
@@ -58,8 +58,8 @@ class Input(HRMInstruction):
 	def to_asm(self):
 		return "INBOX"
 
-	def simulate_hands(self, hands):
-		hands.clear_constraints()
+	def simulate_state(self, state):
+		state.clear_hand_constraints()
 
 	def __repr__(self):
 		return "hrmi.Input()"
@@ -68,8 +68,9 @@ class Output(HRMInstruction):
 	def to_asm(self):
 		return "OUTBOX"
 
-	def simulate_hands(self, hands):
-		hands.replace_constraints(EmptyHands())
+	def simulate_state(self, state):
+		state.clear_hand_constraints()
+		state.add_constraint(EmptyHands())
 
 	def __repr__(self):
 		return "hrmi.Output()"
@@ -93,11 +94,16 @@ class Save(AbstractParameterisedInstruction):
 	mnemonic = "COPYTO"
 	writes_variable = True
 
-	def simulate_hands(self, hands):
-		hands.add_constraint(VariableInHands(self.loc))
+	def simulate_state(self, state):
+		state.clear_variable_constraints(self.loc)
+		state.add_constraint(VariableInHands(self.loc))
 
-	def hands_redundant(self, hands_before):
-		return hands_before.has_constraint(VariableInHands(self.loc))
+		val = state.get_value_in_hands()
+		if val is not None:
+			state.add_constraint(VariableHasValue(self.loc, val))
+
+	def state_redundant(self, state_before):
+		return state_before.has_constraint(VariableInHands(self.loc))
 
 	# This save instruction may be redundant if its
 	# variable will not have its value used again.
@@ -108,41 +114,52 @@ class Load(AbstractParameterisedInstruction):
 	mnemonic = "COPYFROM"
 	reads_variable = True
 
-	def simulate_hands(self, hands):
+	def simulate_state(self, state):
 		var_in_hands = VariableInHands(self.loc)
-		if not hands.has_constraint(var_in_hands):
-			hands.replace_constraints(var_in_hands)
 
-	def hands_redundant(self, hands_before):
-		return hands_before.has_constraint(VariableInHands(self.loc))
+		if not state.has_constraint(var_in_hands):
+			state.clear_hand_constraints()
+
+		state.add_constraint(var_in_hands)
+
+		val = state.get_variable_value(self.loc)
+		if val is not None:
+			state.add_constraint(ValueInHands(val))
+
+	def state_redundant(self, state_before):
+		return state_before.has_constraint(VariableInHands(self.loc))
 
 class Add(AbstractParameterisedInstruction):
 	mnemonic = "ADD"
 	reads_variable = True
 
-	def simulate_hands(self, hands):
-		hands.clear_constraints()
+	def simulate_state(self, state):
+		state.clear_hand_constraints()
 
 class Subtract(AbstractParameterisedInstruction):
 	mnemonic = "SUB"
 	reads_variable = True
 
-	def simulate_hands(self, hands):
-		hands.clear_constraints()
+	def simulate_state(self, state):
+		state.clear_hand_constraints()
 
 class BumpUp(AbstractParameterisedInstruction):
 	mnemonic = "BUMPUP"
 	reads_variable = True
 
-	def simulate_hands(self, hands):
-		hands.replace_constraints(VariableInHands(self.loc))
+	def simulate_state(self, state):
+		state.clear_hand_constraints()
+		state.clear_variable_constraints(self.loc)
+		state.add_constraint(VariableInHands(self.loc))
 
 class BumpDown(AbstractParameterisedInstruction):
 	mnemonic = "BUMPDN"
 	reads_variable = True
 
-	def simulate_hands(self, hands):
-		hands.replace_constraints(VariableInHands(self.loc))
+	def simulate_state(self, state):
+		state.clear_hand_constraints()
+		state.clear_variable_constraints(self.loc)
+		state.add_constraint(VariableInHands(self.loc))
 
 # Instruction which represents an action in the code which could not be
 # expanded into correct code at the initial code generation stage.
@@ -164,18 +181,24 @@ class LoadConstant(PseudoInstruction):
 		super().__init__()
 		self.value = value
 
-	def simulate_hands(self, hands):
-		hands.replace_constraints(ValueInHands(self.value))
+	def simulate_state(self, state):
+		state.clear_hand_constraints()
+		state.add_constraint(ValueInHands(self.value))
 
-	def hands_redundant(self, hands_before):
-		return hands_before.has_constraint(ValueInHands(self.value))
+	def state_redundant(self, state_before):
+		return state_before.has_constraint(ValueInHands(self.value))
 
-	def attempt_expand(self, hands):
-		if hands.has_constraint(ValueInHands(self.value)):
+	def attempt_expand(self, state):
+		hand_val = state.get_value_in_hands()
+		if hand_val == self.value:
 			return []
 
+		var_name = state.find_variable_with_value(self.value)
+		if var_name is not None:
+			return [Load(var_name)]
+
 		if self.value == 0:
-			var_in_hands = hands.get_variable_in_hands()
+			var_in_hands = state.get_variable_in_hands()
 			if var_in_hands is not None:
 				return [Subtract(var_in_hands)]
 
@@ -198,8 +221,8 @@ class Difference(PseudoInstruction):
 		self.left  = left
 		self.right = right
 	
-	def simulate_hands(self, hands):
-		hands.clear_constraints()
+	def simulate_state(self, state):
+		state.clear_hand_constraints()
 
 	def attempt_expand(self, hands):
 		if hands.has_constraint(VariableInHands(self.left)):
@@ -230,9 +253,9 @@ class Block:
 		"label",
 		"jumps_in",
 
-		# Properties used in hands tracking
-		"hands_at_start",
-		"hand_data_propagated",
+		# Properties used in state tracking
+		"state_at_start",
+		"state_data_propagated",
 
 		"lineno",
 	]
@@ -244,8 +267,8 @@ class Block:
 		self.next = None
 		self.label = None
 
-		self.hands_at_start = None
-		self.hand_data_propagated = False
+		self.state_at_start = None
+		self.state_data_propagated = False
 
 		self.lineno = lineno
 
@@ -319,17 +342,17 @@ class Block:
 	def set_label(self, label):
 		self.label = label
 
-	def update_hands(self, new_hands):
-		worst_hands = None
+	def update_state(self, new_state):
+		worst_state = None
 
-		if self.hands_at_start is None:
-			worst_hands = new_hands
+		if self.state_at_start is None:
+			worst_state = new_state
 		else:
-			worst_hands = self.hands_at_start.worst_case(new_hands)
+			worst_state = self.state_at_start.worst_case(new_state)
 
-		if worst_hands != self.hands_at_start:
-			self.hands_at_start = worst_hands
-			self.hand_data_propagated = False
+		if worst_state != self.state_at_start:
+			self.state_at_start = worst_state
+			self.state_data_propagated = False
 
 	# Mark instructions as using the given variable names
 	# Propagation works backwards until it finds an instruction
@@ -406,11 +429,11 @@ class AbstractJump(HRMInstruction):
 		new_dest.register_jump_in(self)
 
 	# Calculate constraints on the hands when this (conditional) jump passes
-	def simulate_hands_pass(self, hands):
+	def simulate_state_pass(self, state):
 		pass
 
 	# Calculate constraints on the hands when this (conditional) jump passes
-	def simulate_hands_fail(self, hands):
+	def simulate_state_fail(self, state):
 		pass
 
 	def __repr__(self):
@@ -435,11 +458,11 @@ class JumpZero(AbstractJump):
 	def to_asm(self):
 		return "JUMPZ " + self.dest.label
 
-	def simulate_hands_pass(self, hands):
-		hands.add_constraint(ValueInHands(0))
+	def simulate_state_pass(self, state):
+		state.add_constraint(ValueInHands(0))
 
-	def simulate_hands_fail(self, hands):
-		hands.add_constraint(ValueNotInHands(0))
+	def simulate_state_fail(self, state):
+		state.add_constraint(ValueNotInHands(0))
 
 	# Check if this jump is guaranteed to fail given the state of the hands
 	def redundant_fails(self, hands):
@@ -511,15 +534,18 @@ class ForeverBlock(CompoundBlock):
 
 # Abstract class for constraints on which values the processor's
 # hands may take during execution.
-class AbstractHandsConstraint:
+class AbstractStateConstraint:
 	# Id used to ensure sub-types have different hashes
 	CONSTRAINT_ID = -1
+
+	constrains_hands = False
+	constrains_variable = False
 
 	def __eq__(self, other):
 		if other is None:
 			return False
 
-		if not isinstance(other, AbstractHandsConstraint):
+		if not isinstance(other, AbstractStateConstraint):
 			return NotImplemented
 
 		return type(self) is type(other)
@@ -528,15 +554,20 @@ class AbstractHandsConstraint:
 		return hash(self.CONSTRAINT_ID)
 
 # The processor has nothing in their hands
-class EmptyHands(AbstractHandsConstraint):
+class EmptyHands(AbstractStateConstraint):
 	CONSTRAINT_ID = 0
+
+	constrains_hands = True
 
 	def __repr__(self):
 		return type(self).__name__ + "()"
 
 # The processor is holding a value which matches the value of a variable
-class VariableInHands(AbstractHandsConstraint):
+class VariableInHands(AbstractStateConstraint):
 	CONSTRAINT_ID = 1
+
+	constrains_hands = True
+	constrains_variable = True
 
 	__slots__ = ["name"]
 
@@ -556,7 +587,7 @@ class VariableInHands(AbstractHandsConstraint):
 	def __repr__(self):
 		return type(self).__name__ + "(" + repr(self.name) + ")"
 
-class AbstractValueConstraint(AbstractHandsConstraint):
+class AbstractValueConstraint(AbstractStateConstraint):
 	__slots__ = ["value"]
 
 	def __init__(self, value):
@@ -578,14 +609,44 @@ class AbstractValueConstraint(AbstractHandsConstraint):
 # The processor is holding a specific, constant value
 class ValueInHands(AbstractValueConstraint):
 	CONSTRAINT_ID = 2
+	constrains_hands = True
 
 # The processor cannot be holding a specific value
 class ValueNotInHands(AbstractValueConstraint):
 	CONSTRAINT_ID = 3
+	constrains_hands = True
+
+class VariableHasValue(AbstractStateConstraint):
+	CONSTRAINT_ID = 4
+	constrains_variable = True
+
+	__slots__ = [
+		"name",
+		"value",
+	]
+
+	def __init__(self, name, value):
+		self.name = name
+		self.value = value
+
+	def __eq__(self, other):
+		super_result = super().__eq__(other)
+		if super_result != True:
+			return super_result
+
+		return self.value == other.value and self.name == other.name
+
+	def __hash__(self):
+		return hash((self.CONSTRAINT_ID, self.name, self.value))
+
+	def __repr__(self):
+		return (type(self).__name__ + "("
+				+ repr(self.name) + ", "
+				+ repr(self.value) + ")")
 
 # Holds a set of zero or more constraints about the processor's
 # hands at a particular point in execution
-class HandsState:
+class OfficeState:
 	__slots__ = ["constraints"]
 
 	def __init__(self, constraints=[]):
@@ -593,7 +654,7 @@ class HandsState:
 
 	# Return only constraints which are guaranteed to be true in both the self and other cases
 	def worst_case(self, other):
-		return HandsState(self.constraints & other.constraints)
+		return OfficeState(self.constraints & other.constraints)
 
 	def has_constraint(self, cons):
 		return cons in self.constraints
@@ -601,12 +662,20 @@ class HandsState:
 	def add_constraint(self, cons):
 		self.constraints.add(cons)
 
-	def replace_constraints(self, cons):
-		self.clear_constraints()
-		self.add_constraint(cons)
-
 	def clear_constraints(self):
 		self.constraints.clear()
+
+	def clear_hand_constraints(self):
+		constraints_to_remove = [con for con in self.constraints
+				if con.constrains_hands]
+		for con in constraints_to_remove:
+			self.constraints.remove(con)
+
+	def clear_variable_constraints(self, name):
+		constraints_to_remove = [con for con in self.constraints
+				if con.constrains_variable and con.name == name]
+		for con in constraints_to_remove:
+			self.constraints.remove(con)
 
 	# Fetch the name of a variable which is already in the processor's hands, or
 	# None if the hands do not match a variable.
@@ -638,11 +707,30 @@ class HandsState:
 
 		return excluded_values
 
+	# Fetch the value of the given variable or None if not known.
+	def get_variable_value(self, name):
+		for con in self.constraints:
+			if isinstance(con, VariableHasValue) and con.name == name:
+				return con.value
+
+		return None
+
+	# Find a variable which is guaranteed to have the given value.
+	# Even if multiple variables satisfy the
+	# requirement, only one will be returned.
+	# If no variables have the value, the function will return None.
+	def find_variable_with_value(self, value):
+		for con in self.constraints:
+			if isinstance(con, VariableHasValue) and con.value == value:
+				return con.name
+
+		return None
+
 	def clone(self):
-		return HandsState(self.constraints)
+		return OfficeState(self.constraints)
 
 	def __eq__(self, other):
-		if not isinstance(other, HandsState):
+		if not isinstance(other, OfficeState):
 			return NotImplemented
 
 		return self.constraints == other.constraints

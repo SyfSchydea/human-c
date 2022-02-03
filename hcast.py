@@ -78,29 +78,36 @@ class AbstractLine:
 	# Doesn't need to assign_next yet
 	def create_block(self):
 		raise NotImplementedError("AbstractLine.createBlock", self)
-	
+
 	# Fetch a list of variables used in this line
 	def get_namespace(self):
 		raise NotImplementedError("AbstractLine.get_namespace", self)
 
-# eg: init Zero @ 10
+# eg: init zero @ 10
+# eg: init zero = 0 @ 10
 class InitialValueDeclaration(AbstractLine):
 	__slots__ = [
 		"name",
 		"loc",
+		"value",
 	]
 
 	def create_block(self):
 		# Empty block
 		self.block = hrmi.Block(self.lineno)
-	
-	def get_memory_map(self):
-		return (MemoryLocation(self.name, self.loc),)
 
-	def __init__(self, name, loc, indent=""):
-		super().__init__(indent)
-		self.name = name
+	def get_memory_map(self):
+		return (MemoryLocation(self.name, self.loc, self.value),)
+
+	def __init__(self, loc, *, name=None, value=None):
+		super().__init__("")
 		self.loc = loc
+		self.name = name
+		self.value = value
+
+		# Assign a unique name if no name is provided
+		if self.name is None:
+			self.name = "init!" + repr(self.loc)
 
 	def get_namespace(self):
 		return Namespace(self.name)
@@ -109,15 +116,21 @@ class InitialValueDeclaration(AbstractLine):
 		return None
 
 	def __repr__(self):
-		return ("InitialValueDeclaration("
-			+ repr(self.name) + ", "
-			+ repr(self.loc) + ", "
-			+ repr(self.indent) + ")")
+		s = "InitialValueDeclaration(" + repr(self.loc)
+
+		if self.name is not None:
+			s += ", name=" + repr(self.name)
+		if self.value is not None:
+			s += ", value=" + repr(self.value)
+
+		s += ")"
+		return s
 
 @dataclass
 class MemoryLocation:
 	name: str
 	loc: int
+	value: int
 
 # Sequence of AbstractLine objects, to be run in order
 class StatementList:
