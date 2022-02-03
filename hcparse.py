@@ -183,6 +183,10 @@ def p_declare_init_with_value(p):
 	"stmt : init name equals number at number"
 	p[0] = ast.InitialValueDeclaration(p[6], name=p[2], value=p[4])
 
+def p_declare_init_without_name(p):
+	"stmt : init number at number"
+	p[0] = ast.InitialValueDeclaration(p[4], value=p[2])
+
 def p_forever(p):
 	"stmt : forever"
 	p[0] = ast.Forever()

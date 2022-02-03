@@ -99,11 +99,15 @@ class InitialValueDeclaration(AbstractLine):
 	def get_memory_map(self):
 		return (MemoryLocation(self.name, self.loc, self.value),)
 
-	def __init__(self, loc, *, name, value=None):
+	def __init__(self, loc, *, name=None, value=None):
 		super().__init__("")
 		self.loc = loc
 		self.name = name
 		self.value = value
+
+		# Assign a unique name if no name is provided
+		if self.name is None:
+			self.name = "init!" + repr(self.loc)
 
 	def get_namespace(self):
 		return Namespace(self.name)
