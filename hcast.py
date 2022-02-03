@@ -1100,15 +1100,20 @@ class AbstractInequalityOperator(AbstractBinaryOperator):
 		if is_zero(self.left):
 			return (self.swap_operands(), injected_stmts)
 
+		expr = self
+		if (not (expr.left.has_side_effects() and expr.right.has_side_effects())
+				and self.includes_zero):
+			expr = expr.swap_operands()
+
 		# eg. (x < y) -> (x - y < 0)
 		diff, diff_injected = validate_expr(
-				Subtract(self.left, self.right), namespace)
+				Subtract(expr.left, expr.right), namespace)
 		injected_stmts.extend(diff_injected)
 
-		self.left = diff
-		self.right = Number(0)
+		expr.left = diff
+		expr.right = Number(0)
 
-		return (self, injected_stmts)
+		return (expr, injected_stmts)
 
 	# Create a Compound condition block which branches to one block
 	# if it passes the condition, or another if it fails.
