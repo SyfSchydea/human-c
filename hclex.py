@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import string
+
 from ply import lex, yacc
 
 from hcexceptions import LexerError
@@ -90,8 +92,14 @@ def t_NUMBER(t):
 
 def t_CHAR_LIT(t):
 	r"'[^'\\\n]'"
+	value = t.value[1] # Remove quotes at start and end
+	if value not in string.ascii_uppercase:
+		raise LexerError(f"Invalid character literal at "
+				f"line {t.lineno}, col {t.lexer.colno}.\n"
+				"Character literals should only be an upper-case letter")
+
 	track(t)
-	t.value = t.value[1] # Remove quotes at start and end
+	t.value = value
 	return t
 
 def t_DBL_EQUALS(t):
