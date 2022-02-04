@@ -7,14 +7,14 @@
 // B U G
 
 // Set up initial floor state
-init u @ 0
-init j @ 1
-init x @ 2
-init g @ 3
-init b @ 4
-init e @ 5
+init 'U' @ 0
+init 'J' @ 1
+init 'X' @ 2
+init 'G' @ 3
+init 'B' @ 4
+init 'E' @ 5
 
 // Output Bug
-output b
-output u
-output g
+output 'B'
+output 'U'
+output 'G'
