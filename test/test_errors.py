@@ -58,5 +58,13 @@ class TestVariables(AbstractTests.TestError):
 				"Attempting to use a variable before it is assigned should "
 						"produce a useful error message")
 
+class TestInvalidChar(AbstractTests.TestError):
+	def test_invalid_char(self):
+		self.assertError("errors/invalid-char.hc",
+				"Invalid character literal at line 6, col 6.\n"
+					"Character literals should only be an upper-case letter",
+				"Attempting to use a character literal with a non letter "
+					"character should throw an error")
+
 if __name__ == "__main__":
 	unittest.main()
