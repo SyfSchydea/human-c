@@ -124,6 +124,9 @@ def memory_map_contains(memory_map, var_name):
 # that variable is in use.
 def record_variable_use(blocks, memory_map):
 	for blk in blocks:
+		blk.clear_variable_use()
+
+	for blk in blocks:
 		for i in range(len(blk.instructions)):
 			instr = blk.instructions[i]
 
@@ -133,11 +136,30 @@ def record_variable_use(blocks, memory_map):
 			blk.back_propagate_variable_use(i, instr.loc,
 					memory_map_contains(memory_map, instr.loc))
 
+# Similar to record_variable_use, but tracks when the values stored in the hands
+# are needed.
+def record_hand_use(blocks):
+	for blk in blocks:
+		blk.clear_hand_use()
+
+	for blk in blocks:
+		for i, instr in enumerate(blk.instructions):
+			if not instr.reads_hands:
+				continue
+
+			blk.back_propagate_hands_use(i)
+
+		if blk.conditional is not None:
+			blk.back_propagate_hands_use(-1)
+
 # Optimise code by tracking where variables are actually
 # used, and when their value is last set.
 # Any instances of a variable's value being set when
 # it isn't going to be used again may be removed.
 def optimise_variable_needs(blocks, memory_map):
+	record_variable_use(blocks, memory_map)
+	record_hand_use(blocks)
+
 	for blk in blocks:
 		i = 0
 		while i < len(blk.instructions):
@@ -199,8 +221,9 @@ class VariableUseTracker:
 # their values simultaneously.
 # Variables which may be merged in this way
 # will be renamed to share the same name.
-# Relies on variable use data being stored by record_variable_use first.
 def merge_disjoint_variables(blocks, namespace, memory_map):
+	record_variable_use(blocks, memory_map)
+
 	# Create data structure to track which pairs
 	# of variables are used simultaneously
 	var_use = VariableUseTracker()
@@ -349,9 +372,8 @@ def main():
 			blocks.remove(end_block)
 			blocks.append(end_block)
 
-		optimise_state_tracking(blocks, initial_memory_map)
-		record_variable_use(blocks, initial_memory_map)
 		merge_disjoint_variables(blocks, namespace, initial_memory_map)
+		optimise_state_tracking(blocks, initial_memory_map)
 	except HCTypeError as e:
 		print(e, file=sys.stderr)
 		return 1

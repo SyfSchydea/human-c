@@ -283,6 +283,8 @@ class While(StmtWithBody):
 	]
 
 	def __init__(self, cond, body=None):
+		super().__init__()
+
 		self.condition = cond
 		self.body = body if body is not None else StatementList()
 
@@ -331,6 +333,8 @@ class If(StmtWithBody):
 	]
 
 	def __init__(self, cond, then_block=None, else_block=None):
+		super().__init__()
+
 		self.condition = cond
 		self.then_block = then_block
 		self.else_block = else_block
@@ -935,7 +939,48 @@ class Multiply(AbstractBinaryOperator):
 
 			return (expr, injected_stmts)
 
-		raise HCTypeError("Unable to multiply", self.left, "with", self.right)
+		# Expand to full multiplication algorithm
+		if (not isinstance(self.left, VariableRef)
+				or (self.left.has_side_effects()
+					and self.right.has_side_effects())):
+			multiplicand_name = namespace.get_unique_name()
+			injected_stmts.append(ExprLine(
+					Assignment(multiplicand_name, self.left)))
+			self.left = VariableRef(multiplicand_name)
+		else:
+			multiplicand_name = self.left.name
+
+		if not isinstance(self.right, VariableRef):
+			multiplier_name = namespace.get_unique_name()
+			injected_stmts.append(ExprLine(
+					Assignment(multiplier_name, self.right)))
+			self.right = VariableRef(multiplier_name)
+		else:
+			multiplier_name = self.right.name
+
+		product_name = namespace.get_unique_name()
+
+		injected_stmts.extend([
+			# Swap operands to ensure multiplier <= multiplicand
+			If(CompareLt(Subtract(VariableRef(multiplicand_name),
+					VariableRef(multiplier_name)), Number(0)), StatementList([
+				ExprLine(Assignment(product_name,
+						VariableRef(multiplicand_name))),
+				ExprLine(Assignment(multiplicand_name,
+						VariableRef(multiplier_name))),
+				ExprLine(Assignment(multiplier_name,
+						VariableRef(product_name))),
+			])),
+			ExprLine(Assignment(product_name, Number(0))),
+			While(CompareNe(VariableRef(multiplier_name), Number(0)),
+					StatementList([
+				ExprLine(Assignment(product_name, Add(VariableRef(product_name),
+						VariableRef(multiplicand_name)))),
+				ExprLine(Decrement(multiplier_name)),
+			])),
+		])
+
+		return (VariableRef(product_name), injected_stmts)
 
 # Abstract class for both increment and decrement
 class AbstractIncrement(AbstractExpr):
@@ -1100,15 +1145,20 @@ class AbstractInequalityOperator(AbstractBinaryOperator):
 		if is_zero(self.left):
 			return (self.swap_operands(), injected_stmts)
 
+		expr = self
+		if (not (expr.left.has_side_effects() and expr.right.has_side_effects())
+				and self.includes_zero):
+			expr = expr.swap_operands()
+
 		# eg. (x < y) -> (x - y < 0)
 		diff, diff_injected = validate_expr(
-				Subtract(self.left, self.right), namespace)
+				Subtract(expr.left, expr.right), namespace)
 		injected_stmts.extend(diff_injected)
 
-		self.left = diff
-		self.right = Number(0)
+		expr.left = diff
+		expr.right = Number(0)
 
-		return (self, injected_stmts)
+		return (expr, injected_stmts)
 
 	# Create a Compound condition block which branches to one block
 	# if it passes the condition, or another if it fails.
