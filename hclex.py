@@ -23,6 +23,7 @@ tokens = (
 
 	"IDENTIFIER",
 	"NUMBER",
+	"CHAR_LIT",
 
 	"EQUALS",
 	"DBL_EQUALS",
@@ -85,6 +86,12 @@ def t_NUMBER(t):
 	r"\d+"
 	track(t)
 	t.value = int(t.value)
+	return t
+
+def t_CHAR_LIT(t):
+	r"'[^'\\\n]'"
+	track(t)
+	t.value = t.value[1] # Remove quotes at start and end
 	return t
 
 def t_DBL_EQUALS(t):

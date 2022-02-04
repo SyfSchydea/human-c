@@ -500,12 +500,18 @@ class Primitive(AbstractExpr):
 	def __repr__(self):
 		return (type(self).__name__ + "(" + repr(self.value) + ")")
 
-class Number(Primitive):
+class RuntimeValue(Primitive):
 	def validate(self, namespace):
 		return (None, None)
 
 	def add_to_block(self, block):
 		block.add_instruction(hrmi.LoadConstant(self.value))
+
+class Number(RuntimeValue):
+	pass
+
+class Character(RuntimeValue):
+	pass
 
 # Boolean value.
 # Currently not directly producable by the source code
@@ -524,7 +530,7 @@ def is_zero(expr):
 class VariableRef(AbstractExpr):
 	__slots__ = ["name"]
 
-	hctype = Number
+	hctype = RuntimeValue
 
 	def add_to_block(self, block):
 		block.add_instruction(hrmi.Load(self.name))
@@ -546,7 +552,7 @@ class VariableRef(AbstractExpr):
 			+ repr(self.name) + ")")
 
 class Input(AbstractExpr):
-	hctype = Number
+	hctype = RuntimeValue
 
 	def add_to_block(self, block):
 		block.add_instruction(hrmi.Input())
@@ -1031,7 +1037,8 @@ class AbstractEqualityOperator(AbstractBinaryOperator):
 
 		injected_stmts.extend(injected_stmts_rt)
 
-		if isinstance(self.left, Number) and isinstance(self.right, Number):
+		if (isinstance(self.left, RuntimeValue)
+				and isinstance(self.right, RuntimeValue)):
 			value = self.left.value == self.right.value
 			if self.negate:
 				value = not value
@@ -1135,7 +1142,8 @@ class AbstractInequalityOperator(AbstractBinaryOperator):
 
 		injected_stmts.extend(injected_stmts_rt)
 
-		if isinstance(self.left, Number) and isinstance(self.right, Number):
+		if (isinstance(self.left, RuntimeValue)
+				and isinstance(self.right, RuntimeValue)):
 			value = self.eval_static(self.left.value, self.right.value)
 			return (value, injected_stmts)
 

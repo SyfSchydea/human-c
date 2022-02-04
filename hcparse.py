@@ -173,6 +173,10 @@ def p_number(p):
 	"number : NUMBER optws"
 	p[0] = p[1]
 
+def p_char_lit(p):
+	"char : CHAR_LIT optws"
+	p[0] = p[1]
+
 # Statements
 
 def p_declare_init(p):
@@ -180,11 +184,13 @@ def p_declare_init(p):
 	p[0] = ast.InitialValueDeclaration(p[4], name=p[2])
 
 def p_declare_init_with_value(p):
-	"stmt : init name equals number at number"
+	"""stmt : init name equals number at number
+	        | init name equals char at number"""
 	p[0] = ast.InitialValueDeclaration(p[6], name=p[2], value=p[4])
 
 def p_declare_init_without_name(p):
-	"stmt : init number at number"
+	"""stmt : init number at number
+	        | init char at number"""
 	p[0] = ast.InitialValueDeclaration(p[4], value=p[2])
 
 def p_forever(p):
@@ -344,6 +350,10 @@ def p_input(p):
 def p_num(p):
 	"expr_v : number"
 	p[0] = ast.Number(p[1])
+
+def p_char(p):
+	"expr_v : char"
+	p[0] = ast.Character(p[1])
 
 def p_var(p):
 	"expr_v : name"
