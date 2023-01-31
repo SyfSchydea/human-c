@@ -454,3 +454,15 @@ class TestInitialNoName(AbstractTests.TestValidProgram):
 			([9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9], [0]),
 			([*"ZHUZH"], [0]),
 		])
+
+class TestMultiplySideEffects(AbstractTests.TestValidProgram):
+	source_path = "misc/multiply-side-effects.hc"
+	initial_memory = [None] * 15 + [0]
+
+	def test_output(self):
+		self.run_tests([
+			([], []),
+			([3, 5], [15, 3, 5]),
+			([6, 4], [24, 6, 4]),
+			([0, 12, 6, 0], [0, 0, 12, 0, 6, 0]),
+		])
