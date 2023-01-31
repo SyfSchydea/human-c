@@ -940,23 +940,15 @@ class Multiply(AbstractBinaryOperator):
 			return (expr, injected_stmts)
 
 		# Expand to full multiplication algorithm
-		if (not isinstance(self.left, VariableRef)
-				or (self.left.has_side_effects()
-					and self.right.has_side_effects())):
-			multiplicand_name = namespace.get_unique_name()
-			injected_stmts.append(ExprLine(
-					Assignment(multiplicand_name, self.left)))
-			self.left = VariableRef(multiplicand_name)
-		else:
-			multiplicand_name = self.left.name
+		multiplicand_name = namespace.get_unique_name()
+		injected_stmts.append(ExprLine(
+				Assignment(multiplicand_name, self.left)))
+		self.left = VariableRef(multiplicand_name)
 
-		if not isinstance(self.right, VariableRef):
-			multiplier_name = namespace.get_unique_name()
-			injected_stmts.append(ExprLine(
-					Assignment(multiplier_name, self.right)))
-			self.right = VariableRef(multiplier_name)
-		else:
-			multiplier_name = self.right.name
+		multiplier_name = namespace.get_unique_name()
+		injected_stmts.append(ExprLine(
+				Assignment(multiplier_name, self.right)))
+		self.right = VariableRef(multiplier_name)
 
 		product_name = namespace.get_unique_name()
 
